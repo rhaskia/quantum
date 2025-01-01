@@ -102,69 +102,6 @@ impl Mul for ComplexNumber {
     }
 }
 
-#[derive(Clone)]
-pub struct Matrix {
-    value: Vec<Vec<ComplexNumber>>,
-    shape: (usize, usize),
-}
-
-impl Matrix {
-    pub fn new(value: Vec<Vec<ComplexNumber>>) -> Self {
-        let shape = (value.len(), value[0].len());
-        Self { value, shape }
-    }
-
-    pub fn scale(self, rhs: ComplexNumber) -> Self {
-        let value =
-            self.value.into_iter().map(|row| row.into_iter().map(|n| n * rhs).collect()).collect();
-
-        Self { value, shape: self.shape }
-    }
-
-    pub fn kronecker() {}
-
-    pub fn dot(&self, vector: &Vec<ComplexNumber>) -> Vec<ComplexNumber> {
-        let mut result = vec![c!(0.0); self.value.len()];
-
-        for i in 0..self.value.len() {
-            for j in 0..self.value[i].len() {
-                result[i] += self.value[i][j] * vector[i];
-            }
-        }
-
-        result
-    }
-}
-
-impl Index<usize> for Matrix {
-    type Output = Vec<ComplexNumber>;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.value[index]
-    }
-}
-
-impl Debug for Matrix {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self.value))
-    }
-}
-
-#[macro_export]
-macro_rules! matrix {
-    // Match the pattern for a 2D matrix
-    [$([$($elem:expr),* $(,)?]),* $(,)?] => {
-        {
-            let temp_matrix = vec![
-                $(
-                    vec![$($elem),*]
-                ),*
-            ];
-            Matrix::new(temp_matrix)
-        }
-    };
-}
-
 #[macro_export]
 macro_rules! c {
     ($real:expr) => {

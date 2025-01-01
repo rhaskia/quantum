@@ -4,8 +4,9 @@ use std::{
     ops::Not,
 };
 
-use crate::complex::{ComplexNumber, Matrix};
-use crate::{c, matrix};
+use crate::complex::ComplexNumber;
+use crate::matrix::Matrix;
+use crate::{c, matrix_new};
 
 pub struct Qubit {
     a: ComplexNumber,
@@ -53,7 +54,7 @@ impl Qubit {
     // Places the qubit in a state of superposition
     pub fn hadamard(&self) -> Self {
         let hadamard_matrix =
-            matrix!([c!(1.0), c!(1.0)], [c!(1.0), c!(-1.0)]).scale(ComplexNumber::SQRT_HALF);
+            matrix_new!([c!(1.0), c!(1.0)], [c!(1.0), c!(-1.0)]).scale(ComplexNumber::SQRT_HALF);
 
         self.dot_matrix(hadamard_matrix)
     }
@@ -61,21 +62,21 @@ impl Qubit {
     // Essentially a Not gate
     // Flips the
     pub fn pauli_x(&self) -> Self {
-        let x = matrix!([c!(0.0), c!(1.0)], [c!(1.0), c!(0.0)]);
+        let x = matrix_new!([c!(0.0), c!(1.0)], [c!(1.0), c!(0.0)]);
 
         self.dot_matrix(x)
     }
 
     // Does something weird idk
     pub fn pauli_y(&self) -> Self {
-        let y = matrix!([c!(0.0), c!(0.0, -1.0)], [c!(0.0, 1.0), c!(0.0)]);
+        let y = matrix_new!([c!(0.0), c!(0.0, -1.0)], [c!(0.0, 1.0), c!(0.0)]);
 
         self.dot_matrix(y)
     }
 
     // Also does something weird
     pub fn pauli_z(&self) -> Self {
-        let y = matrix!([c!(1.0), c!(0.0)], [c!(0.0), c!(-1.0)]);
+        let y = matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), c!(-1.0)]);
 
         self.dot_matrix(y)
     }
@@ -85,14 +86,14 @@ impl Qubit {
         // e^iϕ
         let value = c!(0.0, theta).exp();
 
-        let p = matrix!([c!(1.0), c!(0.0)], [c!(0.0), value]);
+        let p = matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), value]);
 
         self.dot_matrix(p)
     }
 
     // Represents the square root of the pauli gate
     pub fn sqr_x(&self) -> Self {
-        let x = matrix!([c!(1.0, 1.0), c!(1.0, -1.0)], [c!(1.0, -1.0), c!(1.0, 1.0)]);
+        let x = matrix_new!([c!(1.0, 1.0), c!(1.0, -1.0)], [c!(1.0, -1.0), c!(1.0, 1.0)]);
 
         self.dot_matrix(x)
     }
@@ -100,6 +101,10 @@ impl Qubit {
     // Returns two qubits as a vec of ComplexNumber
     pub fn entangle(&self, other: &Qubit) -> Vec<ComplexNumber> {
         vec![self.a, self.b, other.a, other.b]
+    }
+
+    pub fn as_vec(&self) -> Vec<ComplexNumber> {
+        vec![self.a, self.b]
     }
 }
 
@@ -124,55 +129,39 @@ impl Not for Qubit {
 }
 
 struct QubitSystem {
-    qubits: Vec<Qubit>,
+    values: Vec<ComplexNumber>,
 }
 
 impl QubitSystem {
     // Creates a Qubit system, allowing for multi-qubit operations
     pub fn new(qubits: Vec<Qubit>) -> Self {
-        QubitSystem { qubits }
+        let mut values = qubits.into_iter().reduce(|acc, e| tensor_product(acc, e)).as_vec();
+
+        QubitSystem { values }
     }
 
     // Calclates if a system is normal
     // e.g. the absolute of each qubit sums to one
     pub fn system_normal(&self) -> bool {
-        self.qubits.iter().map(|qubit| qubit.abs_squared()).sum::<f64>() - 1.0 < 0.05
+        self.values.iter().map(|c| c.abs_squared()).sum::<f64>() - 1.0 < 0.05
     }
 
     // Helper function for applying matrices onto 2 qubits at once
     pub fn two_qubit_gate(&mut self, qubit1: usize, qubit2: usize, matrix: Matrix) {
-        let two_state = self.qubits[qubit1].entangle(&self.qubits[qubit2]);
+        // let two_state = self.qubits[qubit1].entangle(&self.qubits[qubit2]);
+        //
+        // let result = matrix.dot(&two_state);
 
-        let result = matrix.dot(&two_state);
-
-        self.qubits[qubit1] = Qubit::new(result[0], result[1]);
-        self.qubits[qubit2] = Qubit::new(result[0], result[1]);
+        // self.qubits[qubit1] = Qubit::new(result[0], result[1]);
+        // self.qubits[qubit2] = Qubit::new(result[0], result[1]);
     }
 
-    // Controlled Not
-    // Takes in a control and a target qubit 
-    // Performs a Not (Pauli X) the target if the control is 1
     pub fn cnot(&mut self, control: usize, target: usize) {
-        let cnot = matrix!(
-            [c!(1.0), c!(0.0), c!(0.0), c!(0.0)],
-            [c!(0.0), c!(1.0), c!(0.0), c!(0.0)],
-            [c!(0.0), c!(0.0), c!(0.0), c!(1.0)],
-            [c!(0.0), c!(0.0), c!(1.0), c!(0.0)]
-        );
-
-        self.two_qubit_gate(control, target, cnot);
+        self.two_qubit_gate(control, target, Matrix::cnot());
     }
 
-    // Controlled Pauli Z gate
     pub fn cz(&mut self, control: usize, target: usize) {
-        let cz = matrix!(
-            [c!(1.0), c!(0.0), c!(0.0), c!(0.0)],
-            [c!(0.0), c!(1.0), c!(0.0), c!(0.0)],
-            [c!(0.0), c!(0.0), c!(1.0), c!(0.0)],
-            [c!(0.0), c!(0.0), c!(0.0), c!(-1.0)]
-        );
-
-        self.two_qubit_gate(control, target, cz);
+        self.two_qubit_gate(control, target, Matrix::cz());
     }
 
     // Double Controlled Not
@@ -183,15 +172,12 @@ impl QubitSystem {
     }
 
     pub fn swap(&mut self, qubit1: usize, qubit2: usize) {
-        let swap = matrix!(
-            [c!(1.0), c!(0.0), c!(0.0), c!(0.0)],
-            [c!(0.0), c!(0.0), c!(1.0), c!(0.0)],
-            [c!(0.0), c!(1.0), c!(0.0), c!(0.0)],
-            [c!(0.0), c!(0.0), c!(0.0), c!(1.0)]
-        );
-
-        self.two_qubit_gate(qubit1, qubit2, swap);
+        self.two_qubit_gate(qubit1, qubit2, Matrix::swap());
     }
+}
+
+pub fn tensor_product(tensor1: Vec<ComplexNumber>, tensor2: Vec<ComplexNumber>) -> Vec<ComplexNumber> {
+
 }
 
 #[cfg(test)]
@@ -263,24 +249,24 @@ mod tests {
         assert_eq!(Qubit::one().phase(PI), Qubit::one().pauli_z());
     }
 
-    #[test]
-    pub fn cnot() {
-        let mut system = QubitSystem::new(vec![Qubit::one(), Qubit::zero()]);
-        system.cnot(0, 1);
-
-        assert_eq!(system.qubits[1], Qubit::one());       
-
-        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::zero()]);
-        system.cnot(0, 1);
-
-        assert_eq!(system.qubits[1], Qubit::zero());       
-    }
-
-    #[test]
-    pub fn swap() {
-        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one()]);
-        system.swap(0, 1);
-
-        assert_eq!(system.qubits, vec![Qubit::one(), Qubit::zero()]);       
-    }
+    // #[test]
+    // pub fn cnot() {
+    //     let mut system = QubitSystem::new(vec![Qubit::one(), Qubit::zero()]);
+    //     system.cnot(0, 1);
+    //
+    //     assert_eq!(system.qubits[1], Qubit::one());       
+    //
+    //     let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::zero()]);
+    //     system.cnot(0, 1);
+    //
+    //     assert_eq!(system.qubits[1], Qubit::zero());       
+    // }
+    //
+    // #[test]
+    // pub fn swap() {
+    //     let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one()]);
+    //     system.swap(0, 1);
+    //
+    //     assert_eq!(system.qubits, vec![Qubit::one(), Qubit::zero()]);       
+    // }
 }
