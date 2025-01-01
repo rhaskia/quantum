@@ -1,9 +1,10 @@
 //trait Number = Sized + Copy + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> + Div<Output = Self>;
+use crate::c;
 
 use std::{
     f64::consts::SQRT_2,
     fmt::{Debug, Display},
-    ops::{Add, Index, Mul},
+    ops::{Add, Index, Mul, AddAssign}
 };
 
 #[derive(Copy, Clone)]
@@ -84,6 +85,12 @@ impl Add for ComplexNumber {
     }
 }
 
+impl AddAssign for ComplexNumber {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
+}
+
 impl Mul for ComplexNumber {
     type Output = Self;
 
@@ -112,6 +119,20 @@ impl Matrix {
             self.value.into_iter().map(|row| row.into_iter().map(|n| n * rhs).collect()).collect();
 
         Self { value, shape: self.shape }
+    }
+
+    pub fn kronecker() {}
+
+    pub fn dot(&self, vector: &Vec<ComplexNumber>) -> Vec<ComplexNumber> {
+        let mut result = vec![c!(0.0); self.value.len()];
+
+        for i in 0..self.value.len() {
+            for j in 0..self.value[i].len() {
+                result[i] += self.value[i][j] * vector[i];
+            }
+        }
+
+        result
     }
 }
 
