@@ -1,3 +1,5 @@
+#![feature(more_float_constants)]
+
 mod complex;
 mod matrix;
 mod qubit;

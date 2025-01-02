@@ -1,6 +1,6 @@
 use rand::Rng;
 use std::{
-    f64::consts::PI,
+    f64::consts::{PI, SQRT_3},
     fmt::{Debug, Display},
     ops::Not,
 };
@@ -8,6 +8,8 @@ use std::{
 use crate::complex::ComplexNumber;
 use crate::matrix::Matrix;
 use crate::{c, matrix_new};
+
+const SQRT_THIRD: f64 = 1.0 / SQRT_3;
 
 pub struct Qubit {
     a: ComplexNumber,
@@ -141,6 +143,10 @@ impl QubitSystem {
         QubitSystem { values, len }
     }
 
+    pub fn from_tensor(values: Vec<ComplexNumber>, len: usize) -> Self {
+        Self { values, len }
+    }
+
     // Calclates if a system is normal
     // e.g. the absolute of each qubit sums to one
     pub fn system_normal(&self) -> bool {
@@ -239,8 +245,15 @@ impl QubitSystem {
             .collect();
 
         self.values = measured;
+        self.renormalize();
 
         if state { 1 } else { 0 }
+    }
+
+    pub fn renormalize(&mut self) {
+        let magnitude = self.values.iter().map(|n| n.abs_squared()).sum::<f64>().sqrt();
+
+        self.values = self.values.iter().map(|n| *n / c!(magnitude)).collect();
     }
 }
 
@@ -261,7 +274,7 @@ pub fn tensor_product(
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::SQRT_2;
+    use std::f64::consts::{SQRT_2, SQRT_3};
 
     use super::*;
 
@@ -375,6 +388,14 @@ mod tests {
         system.apply_gate(0, Matrix::swap());
 
         assert_eq!(system.measure(), vec![1, 0]);
+    }
+
+    #[test]
+    pub fn renormalize() {
+        let mut system = QubitSystem::from_tensor(vec![c!(SQRT_THIRD), c!(0.0), c!(0.0), c!(SQRT_THIRD), c!(0.0), c!(0.0), c!(SQRT_THIRD)], 3);
+        assert!(system.system_normal());
+        system.measure_single(0);
+        assert!(system.system_normal());
     }
 
     #[test]

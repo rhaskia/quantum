@@ -4,7 +4,7 @@ use crate::c;
 use std::{
     f64::consts::SQRT_2,
     fmt::{Debug, Display},
-    ops::{Add, Index, Mul, AddAssign}
+    ops::{Add, Index, Mul, AddAssign, Div}
 };
 
 #[derive(Copy, Clone)]
@@ -100,6 +100,18 @@ impl Mul for ComplexNumber {
     fn mul(self, rhs: Self) -> Self::Output {
         let real = self.real * rhs.real - (self.imaginary * rhs.imaginary);
         let imaginary = self.real * rhs.imaginary + self.imaginary * rhs.real;
+
+        Self { real, imaginary }
+    }
+}
+
+impl Div for ComplexNumber {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        // (ac + bd) / (c^2 + d^2)
+        let real = ((self.real * rhs.real) - (self.imaginary * rhs.imaginary)) / (rhs.real.powi(2) + rhs.imaginary.powi(2));
+        let imaginary = ((self.imaginary * rhs.real) + (self.real * rhs.imaginary)) / (rhs.real.powi(2) + rhs.imaginary.powi(2));
 
         Self { real, imaginary }
     }
