@@ -54,9 +54,9 @@ impl Matrix {
         
         let mut result = vec![c!(0.0); self.value.len()];
 
-        for i in 0..self.value.len() {
-            for j in 0..self.value[i].len() {
-                result[i] += self.value[i][j] * vector[i];
+        for (i, row) in self.value.iter().enumerate() {
+            for (j, &value) in row.iter().enumerate() {
+                result[i] += value * vector[j];
             }
         }
 
@@ -80,6 +80,11 @@ impl Matrix {
 
     pub fn pauli_z() -> Self { 
         matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), c!(-1.0)])
+    }
+
+    pub fn hadamard() -> Self {
+        matrix_new!([c!(1.0), c!(1.0)], [c!(1.0), c!(-1.0)]).scale(ComplexNumber::SQRT_HALF)
+
     }
 }
 

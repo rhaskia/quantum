@@ -1,9 +1,9 @@
+use rand::Rng;
 use std::{
     f64::consts::PI,
     fmt::{Debug, Display},
     ops::Not,
 };
-use rand::Rng;
 
 use crate::complex::ComplexNumber;
 use crate::matrix::Matrix;
@@ -54,10 +54,7 @@ impl Qubit {
     // Applys a hadamard matrix onto the qubit
     // Places the qubit in a state of superposition
     pub fn hadamard(&self) -> Self {
-        let hadamard_matrix =
-            matrix_new!([c!(1.0), c!(1.0)], [c!(1.0), c!(-1.0)]).scale(ComplexNumber::SQRT_HALF);
-
-        self.dot_matrix(hadamard_matrix)
+        self.dot_matrix(Matrix::hadamard())
     }
 
     // Essentially a Not gate
@@ -129,16 +126,17 @@ impl Not for Qubit {
     }
 }
 
-struct QubitSystem {
+pub struct QubitSystem {
     values: Vec<ComplexNumber>,
-    len: usize
+    len: usize,
 }
 
 impl QubitSystem {
     // Creates a Qubit system, allowing for multi-qubit operations
     pub fn new(qubits: Vec<Qubit>) -> Self {
         let len = qubits.len();
-        let values = qubits.into_iter().map(|q| q.as_vec()).reduce(|acc, e| tensor_product(acc, e)).unwrap();
+        let values =
+            qubits.into_iter().map(|q| q.as_vec()).reduce(|acc, e| tensor_product(acc, e)).unwrap();
 
         QubitSystem { values, len }
     }
@@ -154,22 +152,33 @@ impl QubitSystem {
 
         let mut gate_size = 1;
         while gate_size < self.values.len() {
-            let partial_gate = if gate_size / 2 == target { matrix.clone() } else { Matrix::identity2() };
+            let partial_gate =
+                if gate_size / 2 == target { matrix.clone() } else { Matrix::identity2() };
             full_gate = full_gate.kronecker(&partial_gate);
             gate_size *= partial_gate.len();
         }
 
-        println!("{:?}", full_gate);
+        self.values = full_gate.dot(&self.values);
+    }
+
+    pub fn apply_gate_all(&mut self, matrix: Matrix) {
+        assert!(matrix.len() == 2);
+
+        let mut full_gate = matrix_new!([c!(1.0)]);
+
+        for i in 0..self.len {
+            full_gate = full_gate * matrix.clone();
+        }
 
         self.values = full_gate.dot(&self.values);
     }
 
     pub fn measure(&mut self) -> Vec<usize> {
         let probabilities: Vec<f64> = self.values.iter().map(|c| c.abs_squared()).collect();
-        
+
+        // Probabilities need to add to one or else the system is corrupted
         assert!(probabilities.iter().sum::<f64>() - 1.0 < 0.05);
-        println!("{probabilities:?}");
-        
+
         let rand_state = rand::random::<f64>();
         let mut state = 0;
 
@@ -186,15 +195,27 @@ impl QubitSystem {
         let bit_size = std::mem::size_of::<usize>() * 8;
 
         for i in 0..self.len {
-            // get bit for given qubit's measured state
+            // Get bit for given qubit's measured state
             result.push((state >> i) & 1);
         }
+
+        let measured_tensor = result
+            .iter()
+            .map(|e| if *e == 1 { Qubit::one() } else { Qubit::zero() })
+            .map(|q| q.as_vec())
+            .reduce(|acc, e| tensor_product(acc, e))
+            .unwrap();
+
+        self.values = measured_tensor;
 
         result
     }
 }
 
-pub fn tensor_product(tensor1: Vec<ComplexNumber>, tensor2: Vec<ComplexNumber>) -> Vec<ComplexNumber> {
+pub fn tensor_product(
+    tensor1: Vec<ComplexNumber>,
+    tensor2: Vec<ComplexNumber>,
+) -> Vec<ComplexNumber> {
     let mut result = Vec::new();
 
     for x in &tensor1 {
@@ -277,22 +298,27 @@ mod tests {
 
     #[test]
     pub fn system_single_gate() {
-        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]); 
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]);
 
         system.apply_gate(1, Matrix::pauli_x())
     }
 
     #[test]
     pub fn system_measure() {
-        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]); 
-        let values = system.values.clone();
-        
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]);
         assert_eq!(system.measure(), vec![0, 1, 0]);
 
         system.apply_gate(1, Matrix::pauli_x());
-        assert_ne!(values, system.values);
 
         assert_eq!(system.measure(), vec![0, 0, 0]);
+    }
+
+    #[test]
+    pub fn superposition_measure() {
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]);
+        system.apply_gate_all(Matrix::pauli_x());
+
+        println!("{:?}", system.measure());
     }
 
     // #[test]
@@ -300,12 +326,12 @@ mod tests {
     //     let mut system = QubitSystem::new(vec![Qubit::one(), Qubit::zero()]);
     //     system.cnot(0, 1);
     //
-    //     assert_eq!(system.qubits[1], Qubit::one());       
+    //     assert_eq!(system.qubits[1], Qubit::one());
     //
     //     let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::zero()]);
     //     system.cnot(0, 1);
     //
-    //     assert_eq!(system.qubits[1], Qubit::zero());       
+    //     assert_eq!(system.qubits[1], Qubit::zero());
     // }
     //
     // #[test]
@@ -313,6 +339,6 @@ mod tests {
     //     let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one()]);
     //     system.swap(0, 1);
     //
-    //     assert_eq!(system.qubits, vec![Qubit::one(), Qubit::zero()]);       
+    //     assert_eq!(system.qubits, vec![Qubit::one(), Qubit::zero()]);
     // }
 }

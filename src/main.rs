@@ -1,7 +1,13 @@
 mod complex;
 mod matrix;
 mod qubit;
+mod prelude;
+
+use crate::prelude::*;
 
 fn main() {
-    println!("Hello, world!");
+    let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]);
+    system.apply_gate_all(Matrix::hadamard());
+
+    println!("{:?}", system.measure());
 }
