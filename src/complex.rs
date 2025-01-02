@@ -63,7 +63,10 @@ impl Display for ComplexNumber {
 
 impl Debug for ComplexNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} + {}i", self.real, self.imaginary))
+        if self.imaginary > 0.01 {
+            return f.write_fmt(format_args!("{} + {}i", self.real, self.imaginary));
+        }
+        f.write_fmt(format_args!("{}", self.real))
     }
 }
 

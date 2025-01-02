@@ -135,7 +135,8 @@ impl Index<usize> for Matrix {
 
 impl Debug for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self.value))
+        let rows = self.value.iter().map(|r| format!("{r:?}")).collect::<Vec<String>>();
+        f.write_fmt(format_args!("{}", rows.join("\n")))
     }
 }
 

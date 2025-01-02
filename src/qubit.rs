@@ -3,6 +3,7 @@ use std::{
     fmt::{Debug, Display},
     ops::Not,
 };
+use rand::Rng;
 
 use crate::complex::ComplexNumber;
 use crate::matrix::Matrix;
@@ -130,30 +131,22 @@ impl Not for Qubit {
 
 struct QubitSystem {
     values: Vec<ComplexNumber>,
+    len: usize
 }
 
 impl QubitSystem {
     // Creates a Qubit system, allowing for multi-qubit operations
     pub fn new(qubits: Vec<Qubit>) -> Self {
+        let len = qubits.len();
         let values = qubits.into_iter().map(|q| q.as_vec()).reduce(|acc, e| tensor_product(acc, e)).unwrap();
 
-        QubitSystem { values }
+        QubitSystem { values, len }
     }
 
     // Calclates if a system is normal
     // e.g. the absolute of each qubit sums to one
     pub fn system_normal(&self) -> bool {
         self.values.iter().map(|c| c.abs_squared()).sum::<f64>() - 1.0 < 0.05
-    }
-
-    // Helper function for applying matrices onto 2 qubits at once
-    pub fn two_qubit_gate(&mut self, qubit1: usize, qubit2: usize, matrix: Matrix) {
-        // let two_state = self.qubits[qubit1].entangle(&self.qubits[qubit2]);
-        //
-        // let result = matrix.dot(&two_state);
-
-        // self.qubits[qubit1] = Qubit::new(result[0], result[1]);
-        // self.qubits[qubit2] = Qubit::new(result[0], result[1]);
     }
 
     pub fn apply_gate(&mut self, target: usize, matrix: Matrix) {
@@ -166,26 +159,38 @@ impl QubitSystem {
             gate_size *= partial_gate.len();
         }
 
+        println!("{:?}", full_gate);
+
         self.values = full_gate.dot(&self.values);
     }
 
-    pub fn cnot(&mut self, control: usize, target: usize) {
-        self.two_qubit_gate(control, target, Matrix::cnot());
-    }
+    pub fn measure(&mut self) -> Vec<usize> {
+        let probabilities: Vec<f64> = self.values.iter().map(|c| c.abs_squared()).collect();
+        
+        assert!(probabilities.iter().sum::<f64>() - 1.0 < 0.05);
+        println!("{probabilities:?}");
+        
+        let rand_state = rand::random::<f64>();
+        let mut state = 0;
 
-    pub fn cz(&mut self, control: usize, target: usize) {
-        self.two_qubit_gate(control, target, Matrix::cz());
-    }
+        let mut weight = 0.0;
+        for (idx, probability) in probabilities.iter().enumerate() {
+            weight += probability;
+            if rand_state <= weight {
+                state = idx;
+                break;
+            }
+        }
 
-    // Double Controlled Not
-    // Essentially a CNot, and then a reversed CNot
-    pub fn dcnot(&mut self, control: usize, target: usize) {
-        self.cnot(control, target);
-        self.cnot(target, control);
-    }
+        let mut result = vec![];
+        let bit_size = std::mem::size_of::<usize>() * 8;
 
-    pub fn swap(&mut self, qubit1: usize, qubit2: usize) {
-        self.two_qubit_gate(qubit1, qubit2, Matrix::swap());
+        for i in 0..self.len {
+            // get bit for given qubit's measured state
+            result.push((state >> i) & 1);
+        }
+
+        result
     }
 }
 
@@ -275,6 +280,19 @@ mod tests {
         let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]); 
 
         system.apply_gate(1, Matrix::pauli_x())
+    }
+
+    #[test]
+    pub fn system_measure() {
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]); 
+        let values = system.values.clone();
+        
+        assert_eq!(system.measure(), vec![0, 1, 0]);
+
+        system.apply_gate(1, Matrix::pauli_x());
+        assert_ne!(values, system.values);
+
+        assert_eq!(system.measure(), vec![0, 0, 0]);
     }
 
     // #[test]

@@ -10,4 +10,5 @@ A basic quantum simulator, mostly created out of interest.
 
 # nice to have
  - | | Qubit pooling system (single qubit objects while having a qubit system)
+ - | | Web editor
 
