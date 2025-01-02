@@ -3,6 +3,7 @@ use crate::matrix_new;
 use crate::complex::ComplexNumber;
 use std::fmt::Debug;
 use std::ops::Index;
+use std::ops::Mul;
 
 #[derive(Clone)]
 pub struct Matrix {
@@ -21,6 +22,10 @@ impl Matrix {
             self.value.into_iter().map(|row| row.into_iter().map(|n| n * rhs).collect()).collect();
 
         Self { value, shape: self.shape }
+    }
+
+    pub fn len(&self) -> usize {
+        self.value.len()
     }
 
     pub fn kronecker(&self, other: &Self) -> Self {
@@ -45,6 +50,8 @@ impl Matrix {
     }
 
     pub fn dot(&self, vector: &Vec<ComplexNumber>) -> Vec<ComplexNumber> {
+        assert_eq!(self.len(), vector.len());
+        
         let mut result = vec![c!(0.0); self.value.len()];
 
         for i in 0..self.value.len() {
@@ -54,6 +61,25 @@ impl Matrix {
         }
 
         result
+    }
+
+    pub fn identity2() -> Self {
+        matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), c!(1.0)])
+    }
+}
+
+// One Qubit Gates 
+impl Matrix { 
+    pub fn pauli_x() -> Self {
+        matrix_new!([c!(0.0), c!(1.0)], [c!(1.0), c!(0.0)])
+    }   
+
+    pub fn pauli_y() -> Self { 
+        matrix_new!([c!(0.0), c!(0.0, -1.0)], [c!(0.0, 1.0), c!(0.0)])
+    }
+
+    pub fn pauli_z() -> Self { 
+        matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), c!(-1.0)])
     }
 }
 
@@ -88,6 +114,14 @@ impl Matrix {
             [c!(0.0), c!(0.0), c!(1.0), c!(0.0)],
             [c!(0.0), c!(0.0), c!(0.0), c!(-1.0)]
         )
+    }
+}
+
+impl Mul for Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.kronecker(&rhs)
     }
 }
 

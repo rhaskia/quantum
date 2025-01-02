@@ -135,7 +135,7 @@ struct QubitSystem {
 impl QubitSystem {
     // Creates a Qubit system, allowing for multi-qubit operations
     pub fn new(qubits: Vec<Qubit>) -> Self {
-        let mut values = qubits.into_iter().reduce(|acc, e| tensor_product(acc, e)).as_vec();
+        let values = qubits.into_iter().map(|q| q.as_vec()).reduce(|acc, e| tensor_product(acc, e)).unwrap();
 
         QubitSystem { values }
     }
@@ -154,6 +154,19 @@ impl QubitSystem {
 
         // self.qubits[qubit1] = Qubit::new(result[0], result[1]);
         // self.qubits[qubit2] = Qubit::new(result[0], result[1]);
+    }
+
+    pub fn apply_gate(&mut self, target: usize, matrix: Matrix) {
+        let mut full_gate = matrix_new!([c!(1.0)]);
+
+        let mut gate_size = 1;
+        while gate_size < self.values.len() {
+            let partial_gate = if gate_size / 2 == target { matrix.clone() } else { Matrix::identity2() };
+            full_gate = full_gate.kronecker(&partial_gate);
+            gate_size *= partial_gate.len();
+        }
+
+        self.values = full_gate.dot(&self.values);
     }
 
     pub fn cnot(&mut self, control: usize, target: usize) {
@@ -177,7 +190,15 @@ impl QubitSystem {
 }
 
 pub fn tensor_product(tensor1: Vec<ComplexNumber>, tensor2: Vec<ComplexNumber>) -> Vec<ComplexNumber> {
+    let mut result = Vec::new();
 
+    for x in &tensor1 {
+        for y in &tensor2 {
+            result.push(*x * *y);
+        }
+    }
+
+    result
 }
 
 #[cfg(test)]
@@ -247,6 +268,13 @@ mod tests {
     #[test]
     pub fn phase_gate() {
         assert_eq!(Qubit::one().phase(PI), Qubit::one().pauli_z());
+    }
+
+    #[test]
+    pub fn system_single_gate() {
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]); 
+
+        system.apply_gate(1, Matrix::pauli_x())
     }
 
     // #[test]
