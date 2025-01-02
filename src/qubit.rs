@@ -194,7 +194,7 @@ impl QubitSystem {
         let mut result = vec![];
         let bit_size = std::mem::size_of::<usize>() * 8;
 
-        for i in 0..self.len {
+        for i in (0..self.len).rev() {
             // Get bit for given qubit's measured state
             result.push((state >> i) & 1);
         }
@@ -209,6 +209,38 @@ impl QubitSystem {
         self.values = measured_tensor;
 
         result
+    }
+
+    pub fn measure_single(&mut self, target: usize) -> usize {
+        let modulo = (2 as usize).pow((self.len - target) as u32);
+        let constraint = modulo / 2;
+        let probability_one = self
+            .values
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| idx % modulo >= constraint)
+            .map(|(_, n)| n.abs_squared())
+            .sum();
+
+        let rand_state = rand::random::<f64>();
+        let state = rand_state < probability_one;
+
+        let keep = (0..self.values.len())
+            .into_iter()
+            .map(|idx| idx % modulo >= constraint)
+            .map(|b| if state { b } else { !b })
+            .collect::<Vec<bool>>();
+
+        let measured = self
+            .values
+            .iter()
+            .enumerate()
+            .map(|(idx, n)| if keep[idx] { *n } else { c!(0.0) })
+            .collect();
+
+        self.values = measured;
+
+        if state { 1 } else { 0 }
     }
 }
 
@@ -311,6 +343,9 @@ mod tests {
         system.apply_gate(1, Matrix::pauli_x());
 
         assert_eq!(system.measure(), vec![0, 0, 0]);
+
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one()]);
+        assert_eq!(system.measure(), vec![0, 1]);
     }
 
     #[test]
@@ -321,24 +356,32 @@ mod tests {
         println!("{:?}", system.measure());
     }
 
-    // #[test]
-    // pub fn cnot() {
-    //     let mut system = QubitSystem::new(vec![Qubit::one(), Qubit::zero()]);
-    //     system.cnot(0, 1);
-    //
-    //     assert_eq!(system.qubits[1], Qubit::one());
-    //
-    //     let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::zero()]);
-    //     system.cnot(0, 1);
-    //
-    //     assert_eq!(system.qubits[1], Qubit::zero());
-    // }
-    //
-    // #[test]
-    // pub fn swap() {
-    //     let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one()]);
-    //     system.swap(0, 1);
-    //
-    //     assert_eq!(system.qubits, vec![Qubit::one(), Qubit::zero()]);
-    // }
+    #[test]
+    pub fn cnot() {
+        let mut system = QubitSystem::new(vec![Qubit::one(), Qubit::zero()]);
+        system.apply_gate(0, Matrix::cnot());
+
+        assert_eq!(system.measure(), vec![1, 1]);
+
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::zero()]);
+        system.apply_gate(0, Matrix::cnot());
+
+        assert_eq!(system.measure(), vec![0, 0]);
+    }
+
+    #[test]
+    pub fn swap() {
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one()]);
+        system.apply_gate(0, Matrix::swap());
+
+        assert_eq!(system.measure(), vec![1, 0]);
+    }
+
+    #[test]
+    pub fn single_measure() {
+        let mut system = QubitSystem::new(vec![Qubit::zero(), Qubit::one(), Qubit::zero()]);
+        assert_eq!(system.measure_single(0), 0);
+        assert_eq!(system.measure_single(1), 1);
+        assert_eq!(system.measure_single(2), 0);
+    }
 }
