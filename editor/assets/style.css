@@ -1,0 +1,116 @@
+* {
+     font-family: system-ui;
+}
+
+body { 
+    background: #4da6ff;
+}
+
+h1 {
+    color: #ffffeb;
+}
+
+.register {
+    background: #ffffeb;
+    display: flex;
+    flex-direction: row;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.registerket {
+}
+
+.registerstart {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+mjx-container {
+    margin: 0 !important;
+    height: fit-content
+}
+
+.circuiteditor {
+    display: flex;
+    position: relative;
+    z-index: 1;
+    background: #ffffeb;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 20px;
+}
+
+.circuit {
+    display: flex;
+}
+
+.quantumgate {
+    border: 1px solid #000;
+    flex-direction: row;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    position: relative;
+    background: #ffffeb;
+}
+
+/* .quantumgate.gateI { */
+/*     border: 1px solid transparent; */
+/*     background: transparent; */
+/*     color: transparent; */
+/* } */
+
+.quantumgate::before {
+  border-bottom: 2px solid black;
+  z-index: -1;
+  width: 46px;
+  content: "";
+  position: absolute;
+  top: 10px;
+}
+
+.gatecolumn {
+    display: flex;
+    flex-direction: column;
+    margin: 0 10px;
+    gap: 5px;
+}
+
+.circuitparts {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.gatedrag {
+    border: 1px solid #000;
+    flex-direction: row;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    position: relative;
+    background: #ffffeb;
+}
+
+.qubitstart {
+    width: 24px;
+    height: 26px;
+    position: relative;
+    top: -4px;
+}
+
+button {
+    background: #ffffeb;
+    border: none;
+    border-radius: 6px;
+}
+
+button:active {
+    background: #c2c2d1;
+}

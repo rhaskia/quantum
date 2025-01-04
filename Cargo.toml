@@ -1,7 +1,23 @@
-[package]
-name = "quantum"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = ["editor", "quantum"]
+resolver = "2"
 
-[dependencies]
-rand = "0.8.5"
+[workspace.dependencies]
+quantum = { path = "./quantum" }
+dioxus = { version = "0.6", features = ["desktop", "html", "hooks", "web"] }
+serde = "1.0"
+anyhow = "1.0.79"
+fern = "0.7"
+log = "0.4.22"
+
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"

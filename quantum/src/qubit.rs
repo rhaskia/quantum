@@ -11,6 +11,7 @@ use crate::{c, matrix_new};
 
 const SQRT_THIRD: f64 = 1.0 / SQRT_3;
 
+#[derive(Clone)]
 pub struct Qubit {
     a: ComplexNumber,
     b: ComplexNumber,
@@ -62,33 +63,22 @@ impl Qubit {
     // Essentially a Not gate
     // Flips the
     pub fn pauli_x(&self) -> Self {
-        let x = matrix_new!([c!(0.0), c!(1.0)], [c!(1.0), c!(0.0)]);
-
-        self.dot_matrix(x)
+        self.dot_matrix(Matrix::pauli_x())
     }
 
     // Does something weird idk
     pub fn pauli_y(&self) -> Self {
-        let y = matrix_new!([c!(0.0), c!(0.0, -1.0)], [c!(0.0, 1.0), c!(0.0)]);
-
-        self.dot_matrix(y)
+        self.dot_matrix(Matrix::pauli_y())
     }
 
     // Also does something weird
     pub fn pauli_z(&self) -> Self {
-        let y = matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), c!(-1.0)]);
-
-        self.dot_matrix(y)
+        self.dot_matrix(Matrix::pauli_z())
     }
 
     // Shifts the phase of the qubit
     pub fn phase(&self, theta: f64) -> Self {
-        // e^iϕ
-        let value = c!(0.0, theta).exp();
-
-        let p = matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), value]);
-
-        self.dot_matrix(p)
+        self.dot_matrix(Matrix::phase(theta))
     }
 
     // Represents the square root of the pauli gate
@@ -165,6 +155,12 @@ impl QubitSystem {
         }
 
         self.values = full_gate.dot(&self.values);
+    }
+
+    pub fn apply_full_gate(&mut self, matrix: Matrix) {
+        assert_eq!(matrix.len(), self.values.len());
+
+        self.values = matrix.dot(&self.values);
     }
 
     pub fn apply_gate_all(&mut self, matrix: Matrix) {
@@ -254,6 +250,10 @@ impl QubitSystem {
         let magnitude = self.values.iter().map(|n| n.abs_squared()).sum::<f64>().sqrt();
 
         self.values = self.values.iter().map(|n| *n / c!(magnitude)).collect();
+    }
+
+    pub fn pretty_print(&self) -> String {
+        format!("{:?}", self.values)
     }
 }
 

@@ -1,0 +1,22 @@
+[application]
+name = "quauntumeditor"
+default_platform = "web"
+
+out_dir = "dist"
+asset_dir = "assets"
+
+[web.app]
+title = "Quantum Editor"
+
+[web.watcher]
+reload_html = true
+watch_path = ["src", "assets"]
+
+# Include style or script assets
+[web.resource]
+style = ["style.css"]
+script = []
+
+[web.resource.dev]
+style = ["style.css"]
+script = []
