@@ -24,7 +24,18 @@ h1 {
 .registerstart {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 7px;
+    border-radius: 2px;
+    padding: 2px;
+}
+
+.qubitstart .MathJax.CtxtMenu_Attached_0 {
+    position: relative;
+    top: -3px;
+}
+
+.starthighlight {
+    background: #4da6ff;
 }
 
 mjx-container {
@@ -40,22 +51,30 @@ mjx-container {
     border-radius: 10px;
     padding: 10px;
     margin-top: 20px;
+    flex-direction: column;
 }
 
 .circuit {
     display: flex;
+    background: repeating-linear-gradient( 0deg, #000 5px, #000 8px, #ffffeb 8px, #ffffeb 38px );
+    background-position-y: -8px;
+    width: fit-content;
+    padding: 0 10px 0 0;
 }
 
 .quantumgate {
     border: 1px solid #000;
     flex-direction: row;
-    min-width: 24px;
+    min-width: 20px;
+    width: fit-content;
     height: 24px;
     display: flex;
     justify-content: center;
     align-content: center;
     position: relative;
+    padding: 0 2px;
     background: #ffffeb;
+    margin: auto;
 }
 
 /* .quantumgate.gateI { */
@@ -64,26 +83,47 @@ mjx-container {
 /*     color: transparent; */
 /* } */
 
-.quantumgate::before {
-  border-bottom: 2px solid black;
-  z-index: -1;
-  width: 46px;
-  content: "";
-  position: absolute;
-  top: 10px;
-}
+/* .quantumgate::before { */
+/*   border-bottom: 2px solid black; */
+/*   z-index: -1; */
+/*   width: calc(200% + 24px); */
+/*   content: ""; */
+/*   position: absolute; */
+/*   top: 10px; */
+/* } */
 
 .gatecolumn {
     display: flex;
     flex-direction: column;
-    margin: 0 10px;
-    gap: 5px;
+    margin: 0 8px;
+    gap: 7px;
+    padding: 2px;
+    border-radius: 2px;
+}
+
+.gatehighlight {
+    background: #4da6ff;
 }
 
 .circuitparts {
     display: flex;
     flex-direction: row;
     gap: 10px;
+}
+
+.gateSWAP, .gateCZ, .gateCNOT {
+    height: 57px;
+    flex-direction: column;
+}
+
+.gateCCX {
+    height: 91px;
+    flex-direction: column;
+}
+
+.gateCCCX {
+    height: 123px;
+    flex-direction: column;
 }
 
 .gatedrag {
@@ -99,10 +139,20 @@ mjx-container {
 }
 
 .qubitstart {
-    width: 24px;
-    height: 26px;
-    position: relative;
-    top: -4px;
+background: #ffffeb;
+  width: 24px;
+  height: 26px;
+  position: relative;
+  white-space: pre;
+  font-size: 18px;
+  line-height: 22px;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+}
+
+.qubitstart mjxcontainer {
+    top: -4px !important;
 }
 
 button {
@@ -112,5 +162,25 @@ button {
 }
 
 button:active {
-    background: #c2c2d1;
+    background: lightgrey;
+}
+
+.addregister {
+    width: 100px;
+    background: #4da6ff;
+    margin: 10px 0;
+    color: #ffffeb;
+    font-weight: 600;
+}
+
+.log {
+z-index: 1;
+  background: #ffffeb;
+  border-radius: 10px;
+  flex-direction: column;
+  margin-top: 20px;
+  padding: 10px;
+  display: flex;
+  position: relative;
+  min-height: 24px;
 }

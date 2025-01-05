@@ -28,6 +28,21 @@ impl ComplexNumber {
 
     pub const SQRT_HALF: Self = ComplexNumber { real: 1.0 / SQRT_2, imaginary: 0.0 };
     pub const SQRT_2: Self = ComplexNumber { real: SQRT_2, imaginary: 0.0 };
+
+    pub fn pretty(&self) -> String {
+        if self.imaginary > 0.05 {
+            return format!("{} + {}i", pretty_num(self.real), pretty_num(self.imaginary));
+        }
+        pretty_num(self.real)
+    }
+}
+
+pub fn pretty_num(n: f64) -> String {
+    let sign = if n.is_sign_negative() { "-" } else { "" };
+    if (n.abs() - (1.0 / SQRT_2)).abs() < 0.05 {
+        return format!("{sign}1/√2");
+    }
+    format!("{n:.2}")
 }
 
 // Complex Specific Operations
@@ -64,9 +79,9 @@ impl Display for ComplexNumber {
 impl Debug for ComplexNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.imaginary > 0.01 {
-            return f.write_fmt(format_args!("{} + {}i", self.real, self.imaginary));
+            return f.write_fmt(format_args!("{:} + {:}i", self.real, self.imaginary));
         }
-        f.write_fmt(format_args!("{}", self.real))
+        f.write_fmt(format_args!("{:}", self.real))
     }
 }
 

@@ -133,6 +133,11 @@ impl QubitSystem {
         QubitSystem { values, len }
     }
 
+    pub fn add_qubit(&mut self, qubit: Qubit) {
+        self.values = tensor_product(self.values.clone(), qubit.as_vec());
+        self.len += 1;
+    }
+
     pub fn from_tensor(values: Vec<ComplexNumber>, len: usize) -> Self {
         Self { values, len }
     }
@@ -252,8 +257,28 @@ impl QubitSystem {
         self.values = self.values.iter().map(|n| *n / c!(magnitude)).collect();
     }
 
+    pub fn get_values(&self) -> Vec<ComplexNumber> {
+        self.values.clone()
+    }
+
     pub fn pretty_print(&self) -> String {
         format!("{:?}", self.values)
+    }
+
+    pub fn apply_gates(&mut self, gates: Vec<Gate>) {
+        let mut full_gate = matrix_new!([c!(1.0)]);
+
+        for (idx, gate) in gates.iter().enumerate() {
+            if *gate == Gate::M {
+                self.measure_single(idx);
+            }
+
+            full_gate = full_gate * gate.to_matrix();
+        }
+
+        assert_eq!(self.values.len(), full_gate.len());
+
+        self.values = full_gate.dot(&self.values);
     }
 }
 
@@ -270,6 +295,70 @@ pub fn tensor_product(
     }
 
     result
+}
+
+#[derive(Clone, PartialEq)]
+pub enum Gate {
+    I,
+    X,
+    Y,
+    Z,
+    H,
+    M,
+    P(f64),
+    S,
+    CNOT,
+    CZ,
+    SWAP,
+    CCX,
+    CCCX,
+}
+
+impl Gate {
+    pub fn to_matrix(&self) -> Matrix {
+        match self {
+            Gate::I => Matrix::identity2(),
+            Gate::X => Matrix::pauli_x(),
+            Gate::Y => Matrix::pauli_y(),
+            Gate::Z => Matrix::pauli_z(),
+            Gate::H => Matrix::hadamard(),
+            Gate::M => Matrix::identity2(),
+            Gate::P(theta) => Matrix::phase(*theta),
+            Gate::S => todo!(),
+            Gate::CNOT => Matrix::cnot(),
+            Gate::CZ => Matrix::cz(),
+            Gate::SWAP => Matrix::swap(),
+            Gate::CCX => Matrix::ccx(),
+            Gate::CCCX => Matrix::cccx(),
+        }
+    }
+
+    pub fn is_phase(&self) -> bool {
+        if let Gate::P(_) = self {
+            return true;
+        }
+        false
+    }
+}
+
+impl Debug for Gate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::I => write!(f, "I"),
+            Self::X => write!(f, "X"),
+            Self::Y => write!(f, "Y"),
+            Self::Z => write!(f, "Z"),
+            Self::H => write!(f, "H"),
+            Self::M => write!(f, "M"),
+            Self::P(_) => write!(f, "P"),
+            Self::S => write!(f, "S"),
+            Gate::CNOT => write!(f, "CNOT"),
+            Gate::CZ => write!(f, "CZ"),
+            Gate::SWAP => write!(f, "SWAP"),
+            Gate::CCX => write!(f, "CCX"),
+            Gate::CCCX => write!(f, "CCCX"),
+        }
+    }
 }
 
 #[cfg(test)]

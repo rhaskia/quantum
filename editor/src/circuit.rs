@@ -8,15 +8,10 @@ pub const STEP: GlobalSignal<usize> = Signal::global(|| 0);
 pub const SYSTEM: GlobalSignal<QubitSystem> =
     Signal::global(|| QubitSystem::new(vec![Qubit::zero(); 2]));
 pub const CURRENT_DRAG: GlobalSignal<Gate> = Signal::global(|| Gate::I);
-
-pub fn gates_to_matrix(gates: Vec<Gate>) -> Matrix {
-    gates.into_iter().map(|gate| gate.to_matrix()).reduce(|acc, e| acc * e).unwrap()
-}
+pub const REGISTERS: GlobalSignal<usize> = Signal::global(|| 2);
 
 #[component]
 pub fn CircuitEditor() -> Element {
-    let registers = use_signal(|| 2);
-
     rsx! {
         div {
             class: "circuiteditor",
@@ -25,34 +20,41 @@ pub fn CircuitEditor() -> Element {
                 class: "circuit",
                 div {
                     class: "registerstart",
-                    for _ in 0..registers() {
+                    class: if STEP() == 0 { "starthighlight" },
+                    for _ in 0..REGISTERS() {
                         div {
                             class: "qubitstart",
-                            "$$\\ket{0}$$"
+                            "|0⟩"
                         }
                     }
-                    div {
-                        visibility: if STEP != 0 { "hidden" },
-                        "^"
-                    }
                 }
+
                 for i in 0..GATE_COLS.read().len() {
                     div {
                         class: "gatecolumn",
+                        class: if STEP() == i + 1 { "gatehighlight" },
                         for j in 0..GATE_COLS.read()[i].len() {
-                            GateObject { column: j, register: i }
-                        }
-                        div {
-                            class: "step",
-                            visibility: if STEP() != i + 1 { "hidden" },
-                            "^"
+                            GateObject { column: i, register: j }
                         }
                     }
                 }
             }
 
+            button {
+                class: "addregister",
+                onclick: move |_| {
+                    *REGISTERS.write() += 1;
+                    for i in 0..GATE_COLS().len() {
+                        GATE_COLS.write()[i].push(Gate::I);
+                    }
+                    SYSTEM.write().add_qubit(Qubit::zero());
+                },
+                "Add Register"
+            }
+
             div {
-                "{SYSTEM.read().pretty_print()}"
+                id: "systemvalues",
+                "{pretty_print(SYSTEM.read().get_values())}"
             }
         }
     }
@@ -75,6 +77,29 @@ pub fn CircuitEditor() -> Element {
 //     }
 // }
 
+pub fn pretty_print(qubit_values: Vec<ComplexNumber>) -> String {
+    let mut ket_strings = Vec::new();
+
+    for (idx, value) in qubit_values.iter().enumerate() {
+        if *value == c!(0.0) {
+            continue;
+        }
+        ket_strings.push(format!("{} |{}⟩", value.pretty(), idx_to_qubit(idx)));
+    }
+
+    format!("{}", ket_strings.join(", "))
+}
+
+pub fn idx_to_qubit(idx: usize) -> String {
+    let mut qubit = Vec::new();
+
+    for i in (0..REGISTERS()).rev() {
+        qubit.push(((idx >> i) & 1).to_string());
+    }
+
+    qubit.join("")
+}
+
 #[component]
 pub fn GateObject(column: usize, register: usize) -> Element {
     let mut highlight = use_signal(|| false);
@@ -82,7 +107,8 @@ pub fn GateObject(column: usize, register: usize) -> Element {
     rsx! {
         div {
             class: "quantumgate",
-            class: "gate{GATE_COLS()[column][register]:?}",
+            class: "gate{GATE_COLS.read()[column][register]:?}",
+            id: "gate{column}_{register}",
             border: if highlight() { "1px dotted black" },
             ondragover: move |e| {
                 e.prevent_default();
@@ -92,6 +118,15 @@ pub fn GateObject(column: usize, register: usize) -> Element {
             ondrop: move |e| {
                 tracing::info!("{:?}", e.data());
                 GATE_COLS.write()[column][register] = CURRENT_DRAG();
+
+                let mat_len = CURRENT_DRAG().to_matrix().len();
+                if mat_len > 2 {
+                    if GATE_COLS()[column].len() == REGISTERS() {
+                        for _ in 0..(log2(mat_len) - 1) { 
+                            GATE_COLS.write()[column].remove(register + 1);
+                        }
+                    }
+                }
                 highlight.set(false);
             },
             onmousedown: move |e| {
@@ -101,38 +136,26 @@ pub fn GateObject(column: usize, register: usize) -> Element {
                 }
             },
             "{GATE_COLS()[column][register]:?}"
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Gate {
-    I,
-    X,
-    Y,
-    Z,
-    H,
-    P(f64),
-    S,
-}
-
-impl Gate {
-    pub fn to_matrix(&self) -> Matrix {
-        match self {
-            Gate::I => Matrix::identity2(),
-            Gate::X => Matrix::pauli_x(),
-            Gate::Y => Matrix::pauli_y(),
-            Gate::Z => Matrix::pauli_z(),
-            Gate::H => Matrix::hadamard(),
-            Gate::P(_) => todo!(),
-            Gate::S => todo!(),
+            if GATE_COLS()[column][register].is_phase() {
+                "("
+                span {
+                    contenteditable: true,
+                    oninput: move |e| {
+                        GATE_COLS.write()[column][register] =
+                            Gate::P(e.data().value().parse().unwrap_or(0.0));
+                    },
+                    role: "textbox",
+                    "0"
+                }
+                ")"
+            }
         }
     }
 }
 
 #[component]
 pub fn CircuitParts() -> Element {
-    let gates = use_signal(|| vec![Gate::X, Gate::Y, Gate::Z, Gate::H, Gate::S]);
+    let gates = use_signal(|| vec![Gate::X, Gate::Y, Gate::Z, Gate::H, Gate::M, Gate::P(0.0), Gate::CNOT, Gate::CZ, Gate::SWAP, Gate::CCX, Gate::CCCX]);
 
     rsx! {
         div {
@@ -150,11 +173,29 @@ pub fn CircuitParts() -> Element {
             div { flex_grow: 1 }
 
             button {
+                class: "addgatebutton",
+                onclick: move |_| GATE_COLS.push(vec![Gate::I; REGISTERS()]),
+                "+"
+            }
+
+            button {
+                class: "clearbutton",
+                onclick: move |_| {
+                    *STEP.write() = 0;
+                    SYSTEM.set(QubitSystem::new(vec![Qubit::zero(); 2]));
+                    REGISTERS.set(2);
+                    GATE_COLS.set(vec![vec![Gate::I; 2]; 2]);
+                },
+                "Clear System"
+            }
+
+            button {
                 class: "resetbutton",
                 onclick: move |_| {
                     *STEP.write() = 0;
+                    SYSTEM.set(QubitSystem::new(vec![Qubit::zero(); REGISTERS()]));
                 },
-                "Reset"
+                "Restart Simulation"
             }
 
             button {
@@ -162,10 +203,23 @@ pub fn CircuitParts() -> Element {
                 onclick: move |_| {
                     if STEP() == GATE_COLS.read().len() { return; }
                     *STEP.write() += 1;
-                    SYSTEM.write().apply_full_gate(gates_to_matrix(GATE_COLS()[STEP() - 1].clone()));
+                    SYSTEM.write().apply_gates(GATE_COLS()[STEP() - 1].clone());
                 },
                 "Simulation Step"
             }
         }
+    }
+}
+
+// Cheap log2 to use for my matrices
+pub fn log2(n: usize) -> usize {
+    match n {
+        1 => 0,
+        2 => 1,
+        4 => 2,
+        8 => 3,
+        16 => 4,
+        32 => 5,
+        _ => panic!("Incorrectly sized matrix used."),
     }
 }
