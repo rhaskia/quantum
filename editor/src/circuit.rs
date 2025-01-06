@@ -12,7 +12,7 @@ pub struct CircuitManager {
     pub wires: Vec<(usize, usize, usize)>,
     registers: usize,
     pub step: usize,
-    functions: Vec<(String, Vec<Vec<Gate>>)>
+    functions: Vec<(String, Vec<Vec<Gate>>)>,
 }
 
 impl CircuitManager {
@@ -37,6 +37,15 @@ impl CircuitManager {
         self.registers
     }
 
+    pub fn gates_range(&self, column: usize) -> Vec<usize> {
+        self.gates[column]
+            .iter()
+            .enumerate()
+            .filter(|(_, gate)| **gate != Gate::Other(String::from("none")))
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
     pub fn add_register(&mut self) {
         self.registers += 1;
         for i in 0..self.gates.len() {
@@ -57,14 +66,20 @@ impl CircuitManager {
             return;
         }
 
+        for i in (register + 1)..self.gates[column].len() {
+            if self.gates[column][i] == Gate::Other(String::from("none")) {
+                self.gates[column][i] = Gate::I;
+            } else {
+                break;
+            }
+        }
+
         self.gates[column][register] = self.current_drag.clone();
 
         let mat_len = self.current_drag.to_matrix().len();
         if mat_len > 2 {
-            if self.gates[column].len() == self.registers {
-                for _ in 0..(log2(mat_len) - 1) {
-                    self.gates[column].remove(register + 1);
-                }
+            for i in 1..(log2(mat_len)) {
+                self.gates[column][register + i] = Gate::Other(String::from("none"));
             }
         }
         // handle replacing big gates with smaller
@@ -87,21 +102,38 @@ impl CircuitManager {
     }
 
     pub fn step(&mut self) {
-        if self.step == self.gates.len() { return; }
+        if self.step == self.gates.len() {
+            return;
+        }
         self.step += 1;
         let mut gates = self.gates[self.step - 1].clone();
-        let wires = self.wires.iter().filter(|wire| wire.0 == self.step - 1).collect::<Vec<&(usize, usize, usize)>>();
+        let wires = self
+            .wires
+            .clone()
+            .into_iter()
+            .filter(|wire| wire.0 == self.step - 1)
+            .collect::<Vec<(usize, usize, usize)>>();
 
         for i in 0..gates.len() {
+            if let Gate::Other(name) = gates[i].clone() {
+                self.apply_function(i, &name);
+            }
+
             for wire in &wires {
                 if wire.2 == i {
-                    gates[i] = if self.system.measure_single(wire.1) == 1 { gates[i].clone() } else { Gate::I };
+                    gates[i] = if self.system.measure_single(wire.1) == 1 {
+                        gates[i].clone()
+                    } else {
+                        Gate::I
+                    };
                 }
-            } 
+            }
         }
 
         self.system.apply_gates(gates);
     }
+
+    pub fn apply_function(&mut self, index: usize, name: &str) {}
 
     pub fn add_column(&mut self) {
         self.gates.push(vec![Gate::I; self.registers]);
@@ -109,7 +141,7 @@ impl CircuitManager {
 
     pub fn set_dragging(&mut self, gate: Gate) {
         self.current_drag = gate;
-    } 
+    }
 }
 
 pub const CIRCUIT: GlobalSignal<CircuitManager> = Signal::global(CircuitManager::new);
@@ -137,7 +169,7 @@ pub fn CircuitEditor() -> Element {
                     div {
                         class: "gatecolumn",
                         class: if CIRCUIT.read().step == i + 1 { "gatehighlight" },
-                        for j in 0..CIRCUIT.read().gates[i].len() {
+                        for j in CIRCUIT.read().gates_range(i) {
                             GateObject { column: i, register: j }
                         }
                         for j in 0..CIRCUIT.read().wires.len() {

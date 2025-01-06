@@ -273,6 +273,10 @@ impl QubitSystem {
                 self.measure_single(idx);
             }
 
+            if let Gate::Other(_) = gate {
+                continue;
+            }
+
             full_gate = full_gate * gate.to_matrix();
         }
 
