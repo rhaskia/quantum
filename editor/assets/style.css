@@ -77,11 +77,11 @@ mjx-container {
     margin: auto;
 }
 
-/* .quantumgate.gateI { */
-/*     border: 1px solid transparent; */
-/*     background: transparent; */
-/*     color: transparent; */
-/* } */
+.quantumgate.gateI {
+    border: 1px solid transparent;
+    background: #ffffff01;
+    color: transparent;
+}
 
 /* .quantumgate::before { */
 /*   border-bottom: 2px solid black; */
@@ -183,4 +183,23 @@ z-index: 1;
   display: flex;
   position: relative;
   min-height: 24px;
+}
+
+.wirecreator {
+    width: 80%;
+    height: 80%;
+    position: absolute;
+}
+
+.wire {
+  position: absolute;
+  width: 5px;
+  --start: min(var(--wire-end), var(--wire-start));
+  --end: max(var(--wire-end), var(--wire-start));
+  border-left: 1px solid black;
+  height: calc((var(--end) - var(--start)) * 7px + (var(--end) - var(--start) - 1) * 26px);
+  z-index: 5;
+  translate: 140% calc(var(--start) * 33px + 26px);
+  border-right: 1px solid black;
+  background: white;
 }

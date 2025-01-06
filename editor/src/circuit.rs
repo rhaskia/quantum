@@ -8,6 +8,8 @@ pub const STEP: GlobalSignal<usize> = Signal::global(|| 0);
 pub const SYSTEM: GlobalSignal<QubitSystem> =
     Signal::global(|| QubitSystem::new(vec![Qubit::zero(); 2]));
 pub const CURRENT_DRAG: GlobalSignal<Gate> = Signal::global(|| Gate::I);
+pub const DRAGGING_WIRE: GlobalSignal<(bool, usize, usize)> = Signal::global(|| (false, 0, 0));
+pub const WIRES: GlobalSignal<Vec<(usize, usize, usize)>> = Signal::global(Vec::new);
 pub const REGISTERS: GlobalSignal<usize> = Signal::global(|| 2);
 
 #[component]
@@ -35,6 +37,14 @@ pub fn CircuitEditor() -> Element {
                         class: if STEP() == i + 1 { "gatehighlight" },
                         for j in 0..GATE_COLS.read()[i].len() {
                             GateObject { column: i, register: j }
+                        }
+                        for wire in WIRES() {
+                            if wire.0 == i {
+                                div {
+                                    class: "wire",
+                                    style: "--wire-start: {wire.1}; --wire-end: {wire.2}"
+                                }
+                            }
                         }
                     }
                 }
@@ -117,6 +127,15 @@ pub fn GateObject(column: usize, register: usize) -> Element {
             ondragleave: move |_| highlight.set(false),
             ondrop: move |e| {
                 tracing::info!("{:?}", e.data());
+                highlight.set(false);
+
+                if DRAGGING_WIRE().0 {
+                    if DRAGGING_WIRE().1 == column && register != DRAGGING_WIRE().2 {
+                        WIRES.push((column, DRAGGING_WIRE().2, register));
+                    }
+                    return;
+                }
+
                 GATE_COLS.write()[column][register] = CURRENT_DRAG();
 
                 let mat_len = CURRENT_DRAG().to_matrix().len();
@@ -127,7 +146,6 @@ pub fn GateObject(column: usize, register: usize) -> Element {
                         }
                     }
                 }
-                highlight.set(false);
             },
             onmousedown: move |e| {
                 tracing::info!("{:?}", e.data());
@@ -149,6 +167,27 @@ pub fn GateObject(column: usize, register: usize) -> Element {
                 }
                 ")"
             }
+            if GATE_COLS()[column][register] == Gate::M {
+                WireCreator { column, register }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn WireCreator(column: usize, register: usize) -> Element { 
+    rsx! {
+        div {
+            class: "wirecreator",
+            draggable: true,
+            ondrag: move |e| { 
+                e.prevent_default();
+                DRAGGING_WIRE.set((true, column, register));
+            },
+            ondragend: move |e| { 
+                e.prevent_default();
+                DRAGGING_WIRE.set((false, column, register));
+            },
         }
     }
 }
