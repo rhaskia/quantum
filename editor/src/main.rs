@@ -25,6 +25,7 @@ pub fn App() -> Element {
         h1 { "Quantum Computer Simulator" }
         CircuitParts { }
         CircuitEditor { }
+        //Functions { }
         Log {}
     }
 }

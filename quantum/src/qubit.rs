@@ -312,6 +312,7 @@ pub enum Gate {
     SWAP,
     CCX,
     CCCX,
+    Other(String),
 }
 
 impl Gate {
@@ -330,6 +331,7 @@ impl Gate {
             Gate::SWAP => Matrix::swap(),
             Gate::CCX => Matrix::ccx(),
             Gate::CCCX => Matrix::cccx(),
+            Gate::Other(_) => unreachable!(),
         }
     }
 
@@ -357,6 +359,7 @@ impl Debug for Gate {
             Gate::SWAP => write!(f, "SWAP"),
             Gate::CCX => write!(f, "CCX"),
             Gate::CCCX => write!(f, "CCCX"),
+            Gate::Other(name) => write!(f, "{name}"),
         }
     }
 }

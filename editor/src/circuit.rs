@@ -1,16 +1,118 @@
+use std::collections::HashMap;
+
 use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
 use quantum::prelude::*;
 
-const GATE_COLS: GlobalSignal<Vec<Vec<Gate>>> =
-    Signal::global(|| vec![vec![Gate::H, Gate::I], vec![Gate::I, Gate::X]]);
-pub const STEP: GlobalSignal<usize> = Signal::global(|| 0);
-pub const SYSTEM: GlobalSignal<QubitSystem> =
-    Signal::global(|| QubitSystem::new(vec![Qubit::zero(); 2]));
-pub const CURRENT_DRAG: GlobalSignal<Gate> = Signal::global(|| Gate::I);
-pub const DRAGGING_WIRE: GlobalSignal<(bool, usize, usize)> = Signal::global(|| (false, 0, 0));
-pub const WIRES: GlobalSignal<Vec<(usize, usize, usize)>> = Signal::global(Vec::new);
-pub const REGISTERS: GlobalSignal<usize> = Signal::global(|| 2);
+pub struct CircuitManager {
+    system: QubitSystem,
+    pub gates: Vec<Vec<Gate>>,
+    current_drag: Gate,
+    dragging_wire: (bool, usize, usize),
+    pub wires: Vec<(usize, usize, usize)>,
+    registers: usize,
+    pub step: usize,
+    functions: Vec<(String, Vec<Vec<Gate>>)>
+}
+
+impl CircuitManager {
+    pub fn new() -> Self {
+        Self {
+            system: QubitSystem::new(vec![Qubit::zero(); 2]),
+            gates: vec![vec![Gate::I; 2]],
+            current_drag: Gate::I,
+            dragging_wire: (false, 0, 0),
+            wires: Vec::new(),
+            registers: 2,
+            step: 0,
+            functions: Vec::new(),
+        }
+    }
+
+    pub fn gates_len(&self) -> usize {
+        self.gates.len()
+    }
+
+    pub fn registers_len(&self) -> usize {
+        self.registers
+    }
+
+    pub fn add_register(&mut self) {
+        self.registers += 1;
+        for i in 0..self.gates.len() {
+            self.gates[i].push(Gate::I);
+        }
+        self.system.add_qubit(Qubit::zero());
+    }
+
+    pub fn get_values(&self) -> Vec<ComplexNumber> {
+        self.system.get_values()
+    }
+
+    pub fn handle_drop(&mut self, column: usize, register: usize) {
+        if self.dragging_wire.0 {
+            if self.dragging_wire.1 == column && register != self.dragging_wire.2 {
+                self.wires.push((column, self.dragging_wire.2, register));
+            }
+            return;
+        }
+
+        self.gates[column][register] = self.current_drag.clone();
+
+        let mat_len = self.current_drag.to_matrix().len();
+        if mat_len > 2 {
+            if self.gates[column].len() == self.registers {
+                for _ in 0..(log2(mat_len) - 1) {
+                    self.gates[column].remove(register + 1);
+                }
+            }
+        }
+        // handle replacing big gates with smaller
+    }
+
+    pub fn set_wire_drag(&mut self, dragging: bool, column: usize, register: usize) {
+        self.dragging_wire = (dragging, column, register);
+    }
+
+    pub fn clear_system(&mut self) {
+        self.step = 0;
+        self.system = QubitSystem::new(vec![Qubit::zero(); 2]);
+        self.registers = 2;
+        self.gates = vec![vec![Gate::I; 2]];
+    }
+
+    pub fn restart(&mut self) {
+        self.system = QubitSystem::new(vec![Qubit::zero(); self.registers]);
+        self.step = 0;
+    }
+
+    pub fn step(&mut self) {
+        if self.step == self.gates.len() { return; }
+        self.step += 1;
+        let mut gates = self.gates[self.step - 1].clone();
+        let wires = self.wires.iter().filter(|wire| wire.0 == self.step - 1).collect::<Vec<&(usize, usize, usize)>>();
+
+        for i in 0..gates.len() {
+            for wire in &wires {
+                if wire.2 == i {
+                    gates[i] = if self.system.measure_single(wire.1) == 1 { gates[i].clone() } else { Gate::I };
+                }
+            } 
+        }
+
+        self.system.apply_gates(gates);
+    }
+
+    pub fn add_column(&mut self) {
+        self.gates.push(vec![Gate::I; self.registers]);
+    }
+
+    pub fn set_dragging(&mut self, gate: Gate) {
+        self.current_drag = gate;
+    } 
+}
+
+pub const CIRCUIT: GlobalSignal<CircuitManager> = Signal::global(CircuitManager::new);
 
 #[component]
 pub fn CircuitEditor() -> Element {
@@ -22,8 +124,8 @@ pub fn CircuitEditor() -> Element {
                 class: "circuit",
                 div {
                     class: "registerstart",
-                    class: if STEP() == 0 { "starthighlight" },
-                    for _ in 0..REGISTERS() {
+                    class: if CIRCUIT.read().step == 0 { "starthighlight" },
+                    for _ in 0..CIRCUIT.read().registers_len() {
                         div {
                             class: "qubitstart",
                             "|0⟩"
@@ -31,18 +133,18 @@ pub fn CircuitEditor() -> Element {
                     }
                 }
 
-                for i in 0..GATE_COLS.read().len() {
+                for i in 0..CIRCUIT.read().gates_len() {
                     div {
                         class: "gatecolumn",
-                        class: if STEP() == i + 1 { "gatehighlight" },
-                        for j in 0..GATE_COLS.read()[i].len() {
+                        class: if CIRCUIT.read().step == i + 1 { "gatehighlight" },
+                        for j in 0..CIRCUIT.read().gates[i].len() {
                             GateObject { column: i, register: j }
                         }
-                        for wire in WIRES() {
-                            if wire.0 == i {
+                        for j in 0..CIRCUIT.read().wires.len() {
+                            if CIRCUIT.read().wires[j].0 == i {
                                 div {
                                     class: "wire",
-                                    style: "--wire-start: {wire.1}; --wire-end: {wire.2}"
+                                    style: "--wire-start: {CIRCUIT.read().wires[j].1}; --wire-end: {CIRCUIT.read().wires[j].2}"
                                 }
                             }
                         }
@@ -52,40 +154,17 @@ pub fn CircuitEditor() -> Element {
 
             button {
                 class: "addregister",
-                onclick: move |_| {
-                    *REGISTERS.write() += 1;
-                    for i in 0..GATE_COLS().len() {
-                        GATE_COLS.write()[i].push(Gate::I);
-                    }
-                    SYSTEM.write().add_qubit(Qubit::zero());
-                },
+                onclick: move |_| CIRCUIT.write().add_register(),
                 "Add Register"
             }
 
             div {
                 id: "systemvalues",
-                "{pretty_print(SYSTEM.read().get_values())}"
+                "{pretty_print(CIRCUIT.read().get_values())}"
             }
         }
     }
 }
-
-// pub fn Register() -> Element {
-//
-//     rsx! {
-//         div {
-//             class: "register",
-//             div {
-//                 class: "registerket",
-//                 "$$\\ket{{0}}$$"
-//             }
-//
-//             for gate in gates() {
-//                 GateObject { gate }
-//             }
-//         }
-//     }
-// }
 
 pub fn pretty_print(qubit_values: Vec<ComplexNumber>) -> String {
     let mut ket_strings = Vec::new();
@@ -103,7 +182,7 @@ pub fn pretty_print(qubit_values: Vec<ComplexNumber>) -> String {
 pub fn idx_to_qubit(idx: usize) -> String {
     let mut qubit = Vec::new();
 
-    for i in (0..REGISTERS()).rev() {
+    for i in (0..CIRCUIT.read().registers).rev() {
         qubit.push(((idx >> i) & 1).to_string());
     }
 
@@ -117,7 +196,7 @@ pub fn GateObject(column: usize, register: usize) -> Element {
     rsx! {
         div {
             class: "quantumgate",
-            class: "gate{GATE_COLS.read()[column][register]:?}",
+            class: "gate{CIRCUIT.read().gates[column][register]:?}",
             id: "gate{column}_{register}",
             border: if highlight() { "1px dotted black" },
             ondragover: move |e| {
@@ -129,37 +208,21 @@ pub fn GateObject(column: usize, register: usize) -> Element {
                 tracing::info!("{:?}", e.data());
                 highlight.set(false);
 
-                if DRAGGING_WIRE().0 {
-                    if DRAGGING_WIRE().1 == column && register != DRAGGING_WIRE().2 {
-                        WIRES.push((column, DRAGGING_WIRE().2, register));
-                    }
-                    return;
-                }
-
-                GATE_COLS.write()[column][register] = CURRENT_DRAG();
-
-                let mat_len = CURRENT_DRAG().to_matrix().len();
-                if mat_len > 2 {
-                    if GATE_COLS()[column].len() == REGISTERS() {
-                        for _ in 0..(log2(mat_len) - 1) { 
-                            GATE_COLS.write()[column].remove(register + 1);
-                        }
-                    }
-                }
+                CIRCUIT.write().handle_drop(column, register);
             },
             onmousedown: move |e| {
                 tracing::info!("{:?}", e.data());
                 if e.data().trigger_button().unwrap() == MouseButton::Auxiliary {
-                    GATE_COLS.write()[column][register] = Gate::I;
+                    CIRCUIT.write().gates[column][register] = Gate::I;
                 }
             },
-            "{GATE_COLS()[column][register]:?}"
-            if GATE_COLS()[column][register].is_phase() {
+            "{CIRCUIT.read().gates[column][register]:?}"
+            if CIRCUIT.read().gates[column][register].is_phase() {
                 "("
                 span {
                     contenteditable: true,
                     oninput: move |e| {
-                        GATE_COLS.write()[column][register] =
+                        CIRCUIT.write().gates[column][register] =
                             Gate::P(e.data().value().parse().unwrap_or(0.0));
                     },
                     role: "textbox",
@@ -167,7 +230,7 @@ pub fn GateObject(column: usize, register: usize) -> Element {
                 }
                 ")"
             }
-            if GATE_COLS()[column][register] == Gate::M {
+            if CIRCUIT.read().gates[column][register] == Gate::M {
                 WireCreator { column, register }
             }
         }
@@ -175,18 +238,18 @@ pub fn GateObject(column: usize, register: usize) -> Element {
 }
 
 #[component]
-pub fn WireCreator(column: usize, register: usize) -> Element { 
+pub fn WireCreator(column: usize, register: usize) -> Element {
     rsx! {
         div {
             class: "wirecreator",
             draggable: true,
-            ondrag: move |e| { 
+            ondrag: move |e| {
                 e.prevent_default();
-                DRAGGING_WIRE.set((true, column, register));
+                CIRCUIT.write().set_wire_drag(true, column, register);
             },
-            ondragend: move |e| { 
+            ondragend: move |e| {
                 e.prevent_default();
-                DRAGGING_WIRE.set((false, column, register));
+                CIRCUIT.write().set_wire_drag(false, column, register);
             },
         }
     }
@@ -194,7 +257,21 @@ pub fn WireCreator(column: usize, register: usize) -> Element {
 
 #[component]
 pub fn CircuitParts() -> Element {
-    let gates = use_signal(|| vec![Gate::X, Gate::Y, Gate::Z, Gate::H, Gate::M, Gate::P(0.0), Gate::CNOT, Gate::CZ, Gate::SWAP, Gate::CCX, Gate::CCCX]);
+    let gates = use_signal(|| {
+        vec![
+            Gate::X,
+            Gate::Y,
+            Gate::Z,
+            Gate::H,
+            Gate::M,
+            Gate::P(0.0),
+            Gate::CNOT,
+            Gate::CZ,
+            Gate::SWAP,
+            Gate::CCX,
+            Gate::CCCX,
+        ]
+    });
 
     rsx! {
         div {
@@ -204,7 +281,7 @@ pub fn CircuitParts() -> Element {
                     class: "gatedrag",
                     draggable: true,
                     border: "1px solid black",
-                    ondrag: move |e| CURRENT_DRAG.set(gate.clone()),
+                    ondrag: move |e| CIRCUIT.write().set_dragging(gate.clone()),
                     "{gate:?}"
                 },
             }
@@ -213,37 +290,25 @@ pub fn CircuitParts() -> Element {
 
             button {
                 class: "addgatebutton",
-                onclick: move |_| GATE_COLS.push(vec![Gate::I; REGISTERS()]),
+                onclick: move |_| CIRCUIT.write().add_column(),
                 "+"
             }
 
             button {
                 class: "clearbutton",
-                onclick: move |_| {
-                    *STEP.write() = 0;
-                    SYSTEM.set(QubitSystem::new(vec![Qubit::zero(); 2]));
-                    REGISTERS.set(2);
-                    GATE_COLS.set(vec![vec![Gate::I; 2]; 2]);
-                },
+                onclick: move |_| CIRCUIT.write().clear_system(),
                 "Clear System"
             }
 
             button {
                 class: "resetbutton",
-                onclick: move |_| {
-                    *STEP.write() = 0;
-                    SYSTEM.set(QubitSystem::new(vec![Qubit::zero(); REGISTERS()]));
-                },
+                onclick: move |_| CIRCUIT.write().restart(),
                 "Restart Simulation"
             }
 
             button {
                 class: "stepbutton",
-                onclick: move |_| {
-                    if STEP() == GATE_COLS.read().len() { return; }
-                    *STEP.write() += 1;
-                    SYSTEM.write().apply_gates(GATE_COLS()[STEP() - 1].clone());
-                },
+                onclick: move |_| CIRCUIT.write().step(),
                 "Simulation Step"
             }
         }
