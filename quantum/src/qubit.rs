@@ -294,7 +294,7 @@ impl QubitSystem {
                 let ket = self.values[j]; 
 
                 let outer_product = bra * ket;
-                density_matrix[i][j] = outer_product;
+                density_matrix[i][j] += outer_product;
             }
         }
 
@@ -304,7 +304,7 @@ impl QubitSystem {
 
 pub fn partial_trace(density_matrix: Matrix, qubit_idx: usize, num_qubits: usize) -> Matrix {
     let size = 2_usize.pow(num_qubits as u32); 
-    let reduced_size = 2_usize.pow((num_qubits - 1) as u32);
+    let reduced_size = size / 2;
 
     let mut reduced_density_matrix = Matrix::new(vec![vec![c!(0.0); reduced_size]; reduced_size]);
 

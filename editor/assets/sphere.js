@@ -23,11 +23,6 @@ const wireframeMaterial = new THREE.LineBasicMaterial({ color: 0x000000, transpa
 const wireframeMesh = new THREE.LineSegments(wireframe, wireframeMaterial);
 scene.add(wireframeMesh);
 
-// Create a point on the sphere
-const pointRadius = 0.3;  // Size of the point
-const pointGeometry = new THREE.SphereGeometry(pointRadius);
-const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xaa00ff, transparent: true, opacity: 0.5 });
-
 const geometry = new THREE.BufferGeometry();
 const material = new THREE.PointsMaterial({ color: 0xaa00ff, size: 1 });
 const points = new THREE.Points(geometry, material);
@@ -35,24 +30,24 @@ scene.add(points);
 
 async function updatePoints(newPositions) {
     let vertices = new Float32Array(newPositions.detail); 
-    console.log(newPositions);
     geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
     geometry.attributes.position.needsUpdate = true; // Flag for updating
 }
 
 document.addEventListener("blochpointsupdate", updatePoints);
 
-let pointsArray = [
-  0, 0, 1,  
-];
+let vertices = new Float32Array([
+  0, 8, 0, 
+]);
 
-updatePoints(pointsArray);
+geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+geometry.attributes.position.needsUpdate = true; // Flag for updating
 
 
 function line(vec, color) {
     const path = new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), vec);
     const geometry = new THREE.TubeGeometry(path, 4, 0.2, 8, false);
-    const material = new THREE.MeshBasicMaterial({ color: color });
+    const material = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.5 });
     const linemesh = new THREE.Mesh(geometry, material);
     scene.add(linemesh);
 }

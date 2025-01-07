@@ -100,12 +100,25 @@ impl CircuitManager {
         self.system = QubitSystem::new(vec![Qubit::zero(); 2]);
         self.registers = 2;
         self.gates = vec![vec![Gate::I; 2]];
+        Self::send_bloch_vectors(vec![vec![0.0, 0.0, 1.0]])
     }
 
     pub fn restart(&mut self) {
         self.system = QubitSystem::new(vec![Qubit::zero(); self.registers]);
         self.step = 0;
+        Self::send_bloch_vectors(vec![vec![0.0, 0.0, 1.0]])
     }
+
+    pub fn send_bloch_vectors(bloch_vectors: Vec<Vec<f64>>) {
+        let js = eval(include_str!("../assets/blochupdate.js"));
+        let _ = js.send(
+            bloch_vectors
+                .into_iter()
+                .map(|v| vec![v[0] * 8.0, v[2] * 8.0, v[1] * 8.0])
+                .flatten()
+                .collect::<Vec<f64>>(),
+        );
+    } 
 
     pub fn step(&mut self) {
         if self.step == self.gates.len() {
@@ -138,22 +151,29 @@ impl CircuitManager {
 
         self.system.apply_gates(gates);
 
-        let density = self.system.density_matrix();
+        let mut density = self.system.density_matrix();
         let mut bloch_vectors = Vec::new();
+        tracing::info!("{density:?}");
 
         for qubit_idx in 0..self.registers {
-            let reduced_density_matrix = partial_trace(density.clone(), qubit_idx, self.registers);
-            bloch_vectors.push(bloch_vector(reduced_density_matrix));
+            let mut density = density.clone();
+            let mut removed = 0;
+            let mut size = self.registers;
+
+            for i in 0..self.registers {
+                tracing::info!("{removed}, {qubit_idx}");
+                if i != qubit_idx { 
+                    density = partial_trace(density.clone(), i - removed, size);
+                    size -= 1;
+                    removed += 1;
+                }
+            }
+            let b = bloch_vector(density.clone());
+            tracing::info!("Qubit {qubit_idx}: {b:?}");
+            bloch_vectors.push(b);
         }
 
-        let js = eval(include_str!("../assets/blochupdate.js"));
-        let _ = js.send(
-            bloch_vectors
-                .into_iter()
-                .map(|v| vec![v[0] * 8.0, v[1] * 8.0, v[2] * 8.0])
-                .flatten()
-                .collect::<Vec<f64>>(),
-        );
+        Self::send_bloch_vectors(bloch_vectors)
     }
 
     pub fn apply_function(&mut self, index: usize, name: &str) {}
