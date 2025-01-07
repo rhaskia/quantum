@@ -3,6 +3,7 @@ use crate::matrix_new;
 use crate::complex::ComplexNumber;
 use std::fmt::Debug;
 use std::ops::Index;
+use std::ops::IndexMut;
 use std::ops::Mul;
 
 #[derive(Clone)]
@@ -92,6 +93,27 @@ impl Matrix {
 
         matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), value])
     }
+
+    pub fn rx(theta: f64) -> Self {
+        let sin = (theta / 2.0).sin() * -1.0;
+        let cos = (theta / 2.0).cos();
+
+        matrix_new!([c!(cos), c!(0.0, sin)], [c!(0.0, sin), c!(cos)])
+    }
+
+    pub fn ry(theta: f64) -> Self {
+        let sin = (theta / 2.0).sin();
+        let cos = (theta / 2.0).cos();
+
+        matrix_new!([c!(cos), c!(0.0, sin * -1.0)], [c!(0.0, sin), c!(cos)])
+    }
+     
+    pub fn rz(theta: f64) -> Self {
+        let sin = (theta / 2.0).sin();
+        let cos = (theta / 2.0).cos();
+
+        matrix_new!([c!(cos, sin), c!(0.0)], [c!(0.0), c!(cos, -1.0 * sin)])
+    }
 }
 
 // Two Qubit Gates
@@ -143,6 +165,19 @@ impl Matrix {
         )
     }
 
+    pub fn cswap() -> Self {
+        matrix_new!(
+            [c!(1.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0)],
+            [c!(0.0), c!(1.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0)],
+            [c!(0.0), c!(0.0), c!(1.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0)],
+            [c!(0.0), c!(0.0), c!(0.0), c!(1.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0)],
+            [c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(1.0), c!(0.0), c!(0.0), c!(0.0)],
+            [c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(1.0), c!(0.0)],
+            [c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(1.0), c!(0.0), c!(0.0)],
+            [c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(0.0), c!(1.0)],
+        )
+    }
+
     pub fn cccx() -> Self {
         let mut mat = vec![vec![c!(0.0); 16]; 16];
 
@@ -174,6 +209,12 @@ impl Index<usize> for Matrix {
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.value[index]
+    }
+}
+
+impl IndexMut<usize> for Matrix {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.value[index]
     }
 }
 

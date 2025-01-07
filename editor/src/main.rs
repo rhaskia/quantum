@@ -22,6 +22,14 @@ pub fn App() -> Element {
         //     r#async: true,
         //     src: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
         // }
+        document::Script { 
+            src:"assets/three.min.js",
+        }
+        document::Script { 
+            src:"assets/sphere.js",
+            r#type: "module", 
+            defer: true,
+        }
         h1 { "Quantum Computer Simulator" }
         CircuitParts { }
         CircuitEditor { }

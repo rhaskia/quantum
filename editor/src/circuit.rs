@@ -1,8 +1,14 @@
 use std::collections::HashMap;
 
-use dioxus::prelude::*;
+use dioxus::{
+    document::{Document, eval},
+    prelude::*,
+};
 use dioxus_elements::input_data::MouseButton;
-use quantum::prelude::*;
+use quantum::{
+    prelude::*,
+    qubit::{bloch_vector, partial_trace},
+};
 
 pub struct CircuitManager {
     system: QubitSystem,
@@ -131,6 +137,23 @@ impl CircuitManager {
         }
 
         self.system.apply_gates(gates);
+
+        let density = self.system.density_matrix();
+        let mut bloch_vectors = Vec::new();
+
+        for qubit_idx in 0..self.registers {
+            let reduced_density_matrix = partial_trace(density.clone(), qubit_idx, self.registers);
+            bloch_vectors.push(bloch_vector(reduced_density_matrix));
+        }
+
+        let js = eval(include_str!("../assets/blochupdate.js"));
+        let _ = js.send(
+            bloch_vectors
+                .into_iter()
+                .map(|v| vec![v[0] * 8.0, v[1] * 8.0, v[2] * 8.0])
+                .flatten()
+                .collect::<Vec<f64>>(),
+        );
     }
 
     pub fn apply_function(&mut self, index: usize, name: &str) {}
@@ -194,6 +217,8 @@ pub fn CircuitEditor() -> Element {
                 id: "systemvalues",
                 "{pretty_print(CIRCUIT.read().get_values())}"
             }
+
+            Renderer {}
         }
     }
 }
@@ -219,6 +244,16 @@ pub fn idx_to_qubit(idx: usize) -> String {
     }
 
     qubit.join("")
+}
+
+#[component]
+pub fn Renderer() -> Element {
+    rsx! {
+        canvas {
+            class: "sphererenderer",
+            id: "sphererenderer",
+        }
+    }
 }
 
 #[component]
@@ -297,11 +332,15 @@ pub fn CircuitParts() -> Element {
             Gate::H,
             Gate::M,
             Gate::P(0.0),
+            Gate::RX(0.0),
+            Gate::RY(0.0),
+            Gate::RZ(0.0),
             Gate::CNOT,
             Gate::CZ,
             Gate::SWAP,
             Gate::CCX,
             Gate::CCCX,
+            Gate::CSWAP,
         ]
     });
 

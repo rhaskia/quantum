@@ -117,7 +117,7 @@ mjx-container {
     flex-direction: column;
 }
 
-.gateCCX {
+.gateCCX, .gateCSWAP {
     height: 91px;
     flex-direction: column;
 }
@@ -203,4 +203,9 @@ z-index: 1;
   translate: 140% calc(var(--start) * 33px + 26px);
   border-right: 1px solid black;
   background: white;
+}
+
+.sphererenderer {
+    width: 100px;
+    height: 100px;
 }

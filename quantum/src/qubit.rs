@@ -284,6 +284,57 @@ impl QubitSystem {
 
         self.values = full_gate.dot(&self.values);
     }
+
+    pub fn density_matrix(&self) -> Matrix {
+        let mut density_matrix = Matrix::new(vec![vec![c!(0.0); self.values.len()]; self.values.len()]);
+
+        for i in 0..self.values.len() {
+            for j in 0..self.values.len() {
+                let bra = self.values[i].conjugate(); 
+                let ket = self.values[j]; 
+
+                let outer_product = bra * ket;
+                density_matrix[i][j] = outer_product;
+            }
+        }
+
+        density_matrix
+    }
+}
+
+pub fn partial_trace(density_matrix: Matrix, qubit_idx: usize, num_qubits: usize) -> Matrix {
+    let size = 2_usize.pow(num_qubits as u32); 
+    let reduced_size = 2_usize.pow((num_qubits - 1) as u32);
+
+    let mut reduced_density_matrix = Matrix::new(vec![vec![c!(0.0); reduced_size]; reduced_size]);
+
+    for i in 0..size {
+        for j in 0..size {
+            let row_idx = (i >> qubit_idx) & 1; 
+            let col_idx = (j >> qubit_idx) & 1; 
+
+            if row_idx == col_idx {
+                let reduced_i = (i & ((1 << qubit_idx) - 1)) | ((i >> (qubit_idx + 1)) << qubit_idx);
+                let reduced_j = (j & ((1 << qubit_idx) - 1)) | ((j >> (qubit_idx + 1)) << qubit_idx);
+
+                reduced_density_matrix[reduced_i][reduced_j] = reduced_density_matrix[reduced_i][reduced_j] + density_matrix[i][j];
+            }
+        }
+    }
+
+    reduced_density_matrix
+}
+
+pub fn bloch_vector(density_matrix: Matrix) -> Vec<f64> {
+    let rho_00 = density_matrix[0][0].real;
+    let rho_11 = density_matrix[1][1].real;
+    let c = density_matrix[0][1];
+
+    let r_x = 2.0 * c.real;
+    let r_y = 2.0 * c.imaginary;
+    let r_z = rho_00 - rho_11;
+
+    vec![r_x, r_y, r_z]
 }
 
 pub fn tensor_product(
@@ -311,11 +362,15 @@ pub enum Gate {
     M,
     P(f64),
     S,
+    RX(f64),
+    RY(f64),
+    RZ(f64),
     CNOT,
     CZ,
     SWAP,
     CCX,
     CCCX,
+    CSWAP,
     Other(String),
 }
 
@@ -328,13 +383,17 @@ impl Gate {
             Gate::Z => Matrix::pauli_z(),
             Gate::H => Matrix::hadamard(),
             Gate::M => Matrix::identity2(),
-            Gate::P(theta) => Matrix::phase(*theta),
             Gate::S => todo!(),
+            Gate::P(theta) => Matrix::phase(*theta),
+            Gate::RX(theta) => Matrix::rx(*theta),
+            Gate::RY(theta) => Matrix::ry(*theta),
+            Gate::RZ(theta) => Matrix::rz(*theta),
             Gate::CNOT => Matrix::cnot(),
             Gate::CZ => Matrix::cz(),
             Gate::SWAP => Matrix::swap(),
             Gate::CCX => Matrix::ccx(),
             Gate::CCCX => Matrix::cccx(),
+            Gate::CSWAP => Matrix::cswap(),
             Gate::Other(_) => unreachable!(),
         }
     }
@@ -357,12 +416,16 @@ impl Debug for Gate {
             Self::H => write!(f, "H"),
             Self::M => write!(f, "M"),
             Self::P(_) => write!(f, "P"),
+            Self::RX(_) => write!(f, "RX"),
+            Self::RY(_) => write!(f, "RY"),
+            Self::RZ(_) => write!(f, "RZ"),
             Self::S => write!(f, "S"),
             Gate::CNOT => write!(f, "CNOT"),
             Gate::CZ => write!(f, "CZ"),
             Gate::SWAP => write!(f, "SWAP"),
             Gate::CCX => write!(f, "CCX"),
             Gate::CCCX => write!(f, "CCCX"),
+            Gate::CSWAP => write!(f, "CSWAP"),
             Gate::Other(name) => write!(f, "{name}"),
         }
     }
