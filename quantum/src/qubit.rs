@@ -383,7 +383,7 @@ impl Gate {
             Gate::Z => Matrix::pauli_z(),
             Gate::H => Matrix::hadamard(),
             Gate::M => Matrix::identity2(),
-            Gate::S => todo!(),
+            Gate::S => Matrix::s(),
             Gate::P(theta) => Matrix::phase(*theta),
             Gate::RX(theta) => Matrix::rx(*theta),
             Gate::RY(theta) => Matrix::ry(*theta),
@@ -394,7 +394,7 @@ impl Gate {
             Gate::CCX => Matrix::ccx(),
             Gate::CCCX => Matrix::cccx(),
             Gate::CSWAP => Matrix::cswap(),
-            Gate::Other(_) => unreachable!(),
+            Gate::Other(_) => matrix_new!([c!(1.0)]),
         }
     }
 

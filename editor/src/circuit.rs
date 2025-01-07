@@ -273,6 +273,9 @@ pub fn Renderer() -> Element {
             class: "sphererenderer",
             id: "sphererenderer",
         }
+        div {
+            class: "qubitgradient",
+        }
     }
 }
 
@@ -351,6 +354,7 @@ pub fn CircuitParts() -> Element {
             Gate::Z,
             Gate::H,
             Gate::M,
+            Gate::S,
             Gate::P(0.0),
             Gate::RX(0.0),
             Gate::RY(0.0),

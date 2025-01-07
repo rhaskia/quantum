@@ -24,17 +24,43 @@ const wireframeMesh = new THREE.LineSegments(wireframe, wireframeMaterial);
 scene.add(wireframeMesh);
 
 const geometry = new THREE.BufferGeometry();
-const material = new THREE.PointsMaterial({ color: 0xaa00ff, size: 1 });
+const material = new THREE.PointsMaterial({ size: 1, vertexColors: true });
 const points = new THREE.Points(geometry, material);
 scene.add(points);
 
 async function updatePoints(newPositions) {
-    let vertices = new Float32Array(newPositions.detail); 
+    let vertices = new Float32Array(newPositions); 
     geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    let colors = [];
+    for (let i = 0; i < vertices.length; i++) {
+        let color = new THREE.Color().setHSL(i / vertices.length, 1, 0.5);
+        colors.push(0, 0, 1);
+    } 
+
+    for (let i = 0; i < vertices.length; i += 3) {
+      for (let j = i + 3; j < vertices.length; j += 3) {
+        const dx = vertices[i] - vertices[j];
+        const dy = vertices[i + 1] - vertices[j + 1];
+        const dz = vertices[i + 2] - vertices[j + 2];
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        
+        if (distance < 0.1) {
+            let new_color = new THREE.Color().setRGB(colors[i], colors[i + 1], colors[i + 2]).offsetHSL(-4 / vertices.length, 0, 0);
+            colors[i] = new_color.r;
+            colors[i + 1] = new_color.g;
+            colors[i + 2] = new_color.b;
+            colors[j] = new_color.r;
+            colors[j + 1] = new_color.g;
+            colors[j + 2] = new_color.b;
+        }
+      }
+    }
+
+    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
     geometry.attributes.position.needsUpdate = true; // Flag for updating
 }
 
-document.addEventListener("blochpointsupdate", updatePoints);
+document.addEventListener("blochpointsupdate", function(e) { updatePoints(e.detail) });
 
 let vertices = new Float32Array([
   0, 8, 0, 
@@ -42,7 +68,6 @@ let vertices = new Float32Array([
 
 geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
 geometry.attributes.position.needsUpdate = true; // Flag for updating
-
 
 function line(vec, color) {
     const path = new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), vec);

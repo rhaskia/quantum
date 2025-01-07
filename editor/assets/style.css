@@ -209,3 +209,7 @@ z-index: 1;
     width: 100px;
     height: 100px;
 }
+
+.qubitgradient {
+background: linear-gradient(90deg in hsl longer hue, red, blue);
+}

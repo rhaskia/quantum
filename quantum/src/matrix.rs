@@ -87,6 +87,10 @@ impl Matrix {
         matrix_new!([c!(1.0), c!(1.0)], [c!(1.0), c!(-1.0)]).scale(ComplexNumber::SQRT_HALF)
     }
 
+    pub fn s() -> Self {
+        matrix_new!([c!(1.0), c!(0.0)], [c!(0.0), c!(0.0, 1.0)])
+    }
+
     pub fn phase(theta: f64) -> Self {
         // e^iϕ
         let value = c!(0.0, theta).exp();
