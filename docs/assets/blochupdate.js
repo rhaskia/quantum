@@ -1,0 +1,1 @@
+const t=new CustomEvent("blochpointsupdate",{detail:await dioxus.recv()});document.dispatchEvent(t);

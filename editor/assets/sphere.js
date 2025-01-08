@@ -7,7 +7,7 @@ const canvas = document.getElementById('sphererenderer');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true  });
-renderer.setSize(200, 200);
+renderer.setSize(250, 250);
 renderer.setPixelRatio(2);
 renderer.setClearColor(0xffffeb);
 
@@ -30,44 +30,53 @@ scene.add(points);
 
 async function updatePoints(newPositions) {
     let vertices = new Float32Array(newPositions); 
-    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-    let colors = [];
-    for (let i = 0; i < vertices.length; i++) {
-        let color = new THREE.Color().setHSL(i / vertices.length, 1, 0.5);
-        colors.push(0, 0, 1);
-    } 
 
+    let clean_vertices = [];
+    let counts = [];
     for (let i = 0; i < vertices.length; i += 3) {
-      for (let j = i + 3; j < vertices.length; j += 3) {
-        const dx = vertices[i] - vertices[j];
-        const dy = vertices[i + 1] - vertices[j + 1];
-        const dz = vertices[i + 2] - vertices[j + 2];
-        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        
-        if (distance < 0.1) {
-            let new_color = new THREE.Color().setRGB(colors[i], colors[i + 1], colors[i + 2]).offsetHSL(-4 / vertices.length, 0, 0);
-            colors[i] = new_color.r;
-            colors[i + 1] = new_color.g;
-            colors[i + 2] = new_color.b;
-            colors[j] = new_color.r;
-            colors[j + 1] = new_color.g;
-            colors[j + 2] = new_color.b;
+        let set = false;
+        for (let j = 0; j < counts.length; j += 1) {
+            const dx = vertices[i] - clean_vertices[j * 3];
+            const dy = vertices[i + 1] - clean_vertices[j * 3 + 1];
+            const dz = vertices[i + 2] - clean_vertices[j * 3 + 2];
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (distance < 0.05) {
+                counts[j] += 1;
+                set = true;
+            }
         }
-      }
+
+        if (!set) {
+            clean_vertices.push(vertices[i], vertices[i + 1], vertices[i + 2])
+            counts.push(0);
+        }
     }
 
-    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+    let colors = [];
+    for (let i = 0; i < counts.length; i++) {
+        let total = (vertices.length / 3) - 1; 
+        let color = new THREE.Color().setHSL((1 - (counts[i] / total)) * 0.7, 0.8, 0.5);
+        console.log((1 - (counts[i] / total)) * 0.7);
+        colors.push(color.r, color.g, color.b);
+    } 
+
+    console.log(counts);
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(clean_vertices), 3 ) );
+
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute( colors, 3 ) );
     geometry.attributes.position.needsUpdate = true; // Flag for updating
+    geometry.attributes.color.needsUpdate = true; // Flag for updating
 }
 
 document.addEventListener("blochpointsupdate", function(e) { updatePoints(e.detail) });
 
-let vertices = new Float32Array([
+let vertices = [
   0, 8, 0, 
-]);
+  0, 8, 0, 
+];
 
-geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-geometry.attributes.position.needsUpdate = true; // Flag for updating
+updatePoints(vertices);
 
 function line(vec, color) {
     const path = new THREE.LineCurve3(new THREE.Vector3(0, 0, 0), vec);

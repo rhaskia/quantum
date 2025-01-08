@@ -8,6 +8,7 @@ body {
 
 h1 {
     color: #ffffeb;
+    margin: 10px 0;
 }
 
 .register {
@@ -18,9 +19,6 @@ h1 {
     padding: 10px;
 }
 
-.registerket {
-}
-
 .registerstart {
     display: flex;
     flex-direction: column;
@@ -28,6 +26,7 @@ h1 {
     border-radius: 2px;
     padding: 2px;
   left: -4px;
+  position: relative;
 }
 
 .qubitstart .MathJax.CtxtMenu_Attached_0 {
@@ -41,7 +40,9 @@ h1 {
 
 mjx-container {
     margin: 0 !important;
-    height: fit-content
+    height: fit-content;
+    width: fit-content;
+    display: inline !important;
 }
 
 .circuiteditor {
@@ -175,15 +176,15 @@ button:active {
 }
 
 .log {
-z-index: 1;
-  background: #ffffeb;
-  border-radius: 10px;
-  flex-direction: column;
-  margin-top: 20px;
-  padding: 10px;
-  display: flex;
-  position: relative;
-  min-height: 24px;
+    z-index: 1;
+    background: #ffffeb;
+    border-radius: 10px;
+    flex-direction: column;
+    margin-top: 20px;
+    padding: 10px;
+    display: flex;
+    position: relative;
+    min-height: 24px;
 }
 
 .wirecreator {
@@ -193,23 +194,61 @@ z-index: 1;
 }
 
 .wire {
-  position: absolute;
-  width: 5px;
-  --start: min(var(--wire-end), var(--wire-start));
-  --end: max(var(--wire-end), var(--wire-start));
-  border-left: 1px solid black;
-  height: calc((var(--end) - var(--start)) * 7px + (var(--end) - var(--start) - 1) * 26px);
-  z-index: 5;
-  translate: 140% calc(var(--start) * 33px + 26px);
-  border-right: 1px solid black;
-  background: white;
+    position: absolute;
+    width: 5px;
+    --start: min(var(--wire-end), var(--wire-start));
+    --end: max(var(--wire-end), var(--wire-start));
+    border-left: 1px solid black;
+    height: calc((var(--end) - var(--start)) * 7px + (var(--end) - var(--start) - 1) * 26px);
+    z-index: 5;
+    translate: 140% calc(var(--start) * 33px + 26px);
+    border-right: 1px solid black;
+    background: white;
+}
+
+.infosection {
+    display: flex;
+    margin-top: 20px;
+    gap: 20px;
 }
 
 .sphererenderer {
-    width: 100px;
-    height: 100px;
+    width: 250px;
+    height: 250px;
+    left: 35px;
+    position: relative;
+}
+
+.qubitinfo {
+    flex-grow: 4;
+    background: #ffffeb;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.blochinfo {
+    background: #ffffeb;
+    border-radius: 8px;
+    padding: 8px;
+    width: 340px;
 }
 
 .qubitgradient {
-background: linear-gradient(90deg in hsl longer hue, red, blue);
+    background: linear-gradient(90deg in hsl longer hue, blue, red);
+    height: 20px;
+    width: 100%;
+    border-radius: 4px;
+}
+
+.gradientcount {
+    display: flex;
+    justify-content: space-between;
+}
+
+h3 {
+    margin: 5px 0;
+}
+
+p {
+    font-size: 15px;
 }

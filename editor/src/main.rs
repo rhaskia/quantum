@@ -1,9 +1,11 @@
 mod circuit;
+mod info;
 
 use dioxus::prelude::*;
 use quantum::prelude::*;
 use tracing::Level;
 use circuit::{CircuitEditor, CircuitParts};
+use info::Info;
 
 pub const LOG: GlobalSignal<Vec<String>> = Signal::global(Vec::new);
 
@@ -17,11 +19,11 @@ fn main() {
 pub fn App() -> Element {
     rsx! {
         link { href: "assets/style.css", rel: "stylesheet" } 
-        // script { 
-        //     id: "MathJax-script",
-        //     r#async: true,
-        //     src: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
-        // }
+        script { 
+            id: "MathJax-script",
+            r#async: true,
+            src: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+        }
         document::Script { 
             src:"assets/three.min.js",
         }
@@ -33,8 +35,7 @@ pub fn App() -> Element {
         h1 { "Quantum Computer Simulator" }
         CircuitParts { }
         CircuitEditor { }
-        //Functions { }
-        Log {}
+        Info {}
     }
 }
 

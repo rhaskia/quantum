@@ -72,6 +72,12 @@ impl CircuitManager {
             return;
         }
 
+        let size = log2(self.current_drag.to_matrix().len());
+        if size > self.registers - register {
+            eval(&format!("alert(\"Quantum gate {:?} needs at least {} qubits to work.\")", self.current_drag, size));
+            return;
+        }
+
         for i in (register + 1)..self.gates[column].len() {
             if self.gates[column][i] == Gate::Other(String::from("none")) {
                 self.gates[column][i] = Gate::I;
@@ -87,6 +93,10 @@ impl CircuitManager {
             for i in 1..(log2(mat_len)) {
                 self.gates[column][register + i] = Gate::Other(String::from("none"));
             }
+        }
+
+        if column == self.gates.len() - 1 {
+            self.add_column();
         }
         // handle replacing big gates with smaller
     }
@@ -230,15 +240,13 @@ pub fn CircuitEditor() -> Element {
             button {
                 class: "addregister",
                 onclick: move |_| CIRCUIT.write().add_register(),
-                "Add Register"
+                "Add Qubit"
             }
 
             div {
                 id: "systemvalues",
                 "{pretty_print(CIRCUIT.read().get_values())}"
             }
-
-            Renderer {}
         }
     }
 }
@@ -264,19 +272,6 @@ pub fn idx_to_qubit(idx: usize) -> String {
     }
 
     qubit.join("")
-}
-
-#[component]
-pub fn Renderer() -> Element {
-    rsx! {
-        canvas {
-            class: "sphererenderer",
-            id: "sphererenderer",
-        }
-        div {
-            class: "qubitgradient",
-        }
-    }
 }
 
 #[component]
