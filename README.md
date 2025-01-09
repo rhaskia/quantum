@@ -17,4 +17,4 @@ The quantum library can be used separately, but it was mostly built for this edi
 Drag the white boxes with words/letters at the top of the screen onto the black lines below. Once you've made something you want to test, hit the `Simulation Step` button.
 
 # Running
-Either use the github page for this repo or clone it and using the dioxus cli (```cargo install dioxus-cli``` - you will need rust installed as well) run the following: ```dx serve --package editor --platform web```
+Either use the github page for this repo or clone it and using the dioxus cli (```cargo install dioxus-cli``` - you will need [rust installed](https://www.rust-lang.org/tools/install) as well) run the following: ```dx serve --package editor --platform web```
