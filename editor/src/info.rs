@@ -52,6 +52,26 @@ pub fn Info() -> Element {
                 p {
                     {entanglement}
                 }
+                h3 { "More Reading" }
+                a {
+                    href: "https://learn.microsoft.com/en-us/azure/quantum/concepts-the-qubit",
+                    "Microsoft Quantum Documentation"
+                }
+                br {}
+                a {
+                    href: "https://www.quantum-inspire.com/kbase/introduction-to-quantum-computing/",
+                    "Quantum Inspire"
+                }
+                br {}
+                a {
+                    href: "https://medium.com/quantum-untangled/quantum-states-and-the-bloch-sphere-9f3c0c445ea3",
+                    "Medium Article on the Bloch Sphere"
+                }
+                br {}
+                a {
+                    href: "https://learning.quantum.ibm.com/",
+                    "IBM Quantum Learning"
+                }
             }
             div {
                 class: "blochinfo",

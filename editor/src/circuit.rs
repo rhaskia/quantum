@@ -440,6 +440,8 @@ pub fn CircuitParts() -> Element {
         ]
     });
 
+    let mut dragging = use_signal(|| false);
+
     rsx! {
         div {
             class: "circuitparts",
@@ -449,7 +451,18 @@ pub fn CircuitParts() -> Element {
                     draggable: true,
                     border: "1px solid black",
                     ondrag: move |e| CIRCUIT.write().set_dragging(gate.clone()),
+                    ondragend: move |_| dragging.set(false),
+                    onmousedown: move |_| dragging.set(true),
+                    onmouseup: move |_| dragging.set(false),
                     "{gate:?}"
+                    if !dragging() {
+                        div {
+                            class: "tooltip",
+                            draggable: true,
+                            ondrag: |e| e.prevent_default(),
+                            "{gate_info(&gate)}"
+                        }
+                    }
                 },
             }
 
@@ -505,5 +518,28 @@ pub fn log2(n: usize) -> usize {
         16 => 4,
         32 => 5,
         _ => panic!("Incorrectly sized matrix used."),
+    }
+}
+
+pub fn gate_info(gate: &Gate) -> &str {
+    match gate {
+        Gate::I => "",
+        Gate::X => "Flips on the X axis",
+        Gate::Y => "Flips on the Y axis",
+        Gate::Z => "Flips on the Z axis",
+        Gate::H => "Puts a qubit into a superposition",
+        Gate::M => "Measures a qubit",
+        Gate::P(_) => "Alters the phase of a qubit",
+        Gate::S => "Phase shift of pi/2",
+        Gate::RX(_) => "Rotates the X axis",
+        Gate::RY(_) => "Rotates the Y axis",
+        Gate::RZ(_) => "Rotates the Z axis",
+        Gate::CNOT => "Performs an X gate depending on another qubit",
+        Gate::CZ => "Performs a Z gate depending on another qubit",
+        Gate::SWAP => "Swaps two qubits",
+        Gate::CCX => "Performs an X gate depending on two qubits",
+        Gate::CCCX => "Performs an X gate depending on three qubits",
+        Gate::CSWAP => "Performs a swap depending on a qubit",
+        Gate::Other(_) => "Nothing",
     }
 }
