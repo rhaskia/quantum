@@ -1,6 +1,6 @@
 # Quantum Simulator
 ![./example.png](./example.png)
-A [web editor](https://rhaskia.github.io/quantum) for quantum circuits, built on a library made from scratch for quantum simulation. 
+A [web editor](https://rhaskia.github.io/quantum) (built with dioxus) for quantum circuits, built on a library made from scratch in rust for quantum simulation. 
 The web editor is fully featured, even containing a Bloch Sphere for easy visualization of quantum circuits. 
 However, this is mostly meant as a teaching tool for basic quantum circuits, as it does not scale well. 
 The quantum library can be used separately, but it was mostly built for this editor, so there are likely better options available.
