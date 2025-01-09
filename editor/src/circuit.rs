@@ -437,6 +437,20 @@ pub fn CircuitParts() -> Element {
                 ],
                 vec![(4, 1, 2), (5, 0, 2)],
             ),
+            (
+                "Deutsch–Jozsa Algorithm",
+                gates![
+                    [X, I, I],
+                    [H, H, H],
+                    [SWAP, Other(String::from("none")), I],
+                    [I, CNOT, Other(String::from("none"))],
+                    [SWAP, Other(String::from("none")), I],
+                    [I, CNOT, Other(String::from("none"))],
+                    [H, H, I],
+                    [M, M, I]
+                ],
+                vec![]
+            ),
         ]
     });
 
