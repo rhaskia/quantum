@@ -432,7 +432,8 @@ pub fn CircuitParts() -> Element {
                     [CNOT, Other(String::from("none")), I],
                     [H, I, I],
                     [I, M, X],
-                    [M, I, Z]
+                    [M, I, Z],
+                    [I, I, I]
                 ],
                 vec![(4, 1, 2), (5, 0, 2)],
             ),

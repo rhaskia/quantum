@@ -78,6 +78,7 @@ mjx-container {
     padding: 0 2px;
     background: #ffffeb;
     margin: auto;
+    userselect: none;
 }
 
 .quantumgate.gateI {
