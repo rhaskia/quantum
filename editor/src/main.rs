@@ -32,7 +32,18 @@ pub fn App() -> Element {
             r#type: "module", 
             defer: true,
         }
-        h1 { "Quantum Computer Simulator" }
+        div {
+            class: "header",
+            h1 { "Quantum Computer Simulator" }
+            div {
+                class: "links",
+                a {
+                    class: "githublink",
+                    href: "https://github.com/rhaskia/quantum",
+                    img { src: "assets/github-mark-white.png" }
+                }
+            }
+        }
         CircuitParts { }
         CircuitEditor { }
         Info {}

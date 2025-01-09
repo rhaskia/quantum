@@ -398,11 +398,11 @@ impl Gate {
         }
     }
 
-    pub fn is_phase(&self) -> bool {
-        if let Gate::P(_) = self {
-            return true;
+    pub fn is_variable(&self) -> bool {
+        match self {
+            Gate::P(_) | Gate::RX(_) | Gate::RY(_) | Gate::RZ(_) => true,
+            _ => false
         }
-        false
     }
 }
 

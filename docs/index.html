@@ -6,16 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="UTF-8" />
   <link rel="stylesheet" href="style.css">
-<link rel="preload" href="./wasm/editor_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-            <link rel="preload" href="./wasm/editor.js" as="script">
+<link rel="preload" href="/./wasm/editor_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+            <link rel="preload" href="/./wasm/editor.js" as="script">
             </head>
   <body>
     <div id="main"></div>
   <script>
             // We can't use a module script here because we need to start the script immediately when streaming
-            import("./wasm/editor.js").then(
+            import("/./wasm/editor.js").then(
                 ({ default: init }) => {
-                init("./wasm/editor_bg.wasm").then((wasm) => {
+                init("/./wasm/editor_bg.wasm").then((wasm) => {
                     if (wasm.__wbindgen_start == undefined) {
                     wasm.main();
                     }

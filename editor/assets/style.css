@@ -8,7 +8,8 @@ body {
 
 h1 {
     color: #ffffeb;
-    margin: 10px 0;
+    margin-bottom: 10px;
+    margin-top: 0px;
 }
 
 .register {
@@ -163,6 +164,16 @@ button {
     border-radius: 6px;
 }
 
+select {
+    background: #ffffeb;
+    border: none;
+    border-radius: 6px;
+}
+
+option {
+
+}
+
 button:active {
     background: lightgrey;
 }
@@ -224,6 +235,7 @@ button:active {
     background: #ffffeb;
     border-radius: 8px;
     padding: 8px;
+    height: fit-content;
 }
 
 .blochinfo {
@@ -231,6 +243,7 @@ button:active {
     border-radius: 8px;
     padding: 8px;
     width: 340px;
+    min-width: 340px;
 }
 
 .qubitgradient {
@@ -251,4 +264,20 @@ h3 {
 
 p {
     font-size: 15px;
+}
+
+.header{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.githublink {
+    position: relative;
+    top: 14px;
+}
+
+.githublink img {
+    width: 32px;
+    height: 32px;
 }

@@ -28,8 +28,21 @@ const material = new THREE.PointsMaterial({ size: 1, vertexColors: true });
 const points = new THREE.Points(geometry, material);
 scene.add(points);
 
+let vertices_current = [];
+let vertices_target = [];
+
 async function updatePoints(newPositions) {
     let vertices = new Float32Array(newPositions); 
+
+    vertices_target = [];
+    for (let i = 0; i < newPositions.length; i += 3) { 
+        let {r, theta, phi} = cartesianToSpherical(newPositions[i], newPositions[i + 1], newPositions[i + 2]);
+        vertices_target.push(r, theta, phi);
+    }
+    if (vertices_current.length != vertices_target.length) {
+        console.log("qubit length changed");
+        vertices_current = vertices_target;
+    }
 
     let clean_vertices = [];
     let counts = [];
@@ -56,23 +69,53 @@ async function updatePoints(newPositions) {
     let colors = [];
     for (let i = 0; i < counts.length; i++) {
         let total = (vertices.length / 3) - 1; 
+        if (total == 0) { total = 1000; }
         let color = new THREE.Color().setHSL((1 - (counts[i] / total)) * 0.7, 0.8, 0.5);
-        console.log((1 - (counts[i] / total)) * 0.7);
         colors.push(color.r, color.g, color.b);
     } 
 
-    console.log(counts);
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(clean_vertices), 3 ) );
+    let colors_all = [];
+    for (let i = 0; i < vertices.length; i += 3) {
+        for (let j = 0; j < clean_vertices.length; j += 3) {            
+            const dx = vertices[i] - clean_vertices[j];
+            const dy = vertices[i + 1] - clean_vertices[j + 1];
+            const dz = vertices[i + 2] - clean_vertices[j + 2];
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute( colors, 3 ) );
-    geometry.attributes.position.needsUpdate = true; // Flag for updating
+            if (distance < 0.05) {
+                colors_all.push(colors[j], colors[j + 1], colors[j + 2]);
+            }
+        }
+    }
+
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute( colors_all, 3 ) );
     geometry.attributes.color.needsUpdate = true; // Flag for updating
+}
+
+function cartesianToSpherical(x, y, z) {
+    const r = Math.sqrt(x * x + y * y + z * z);
+    if (r < 0.05) {
+        return { r, theta: 0, phi: 0 };
+    }  
+    const theta = Math.acos(z / r); // polar angle
+    const phi = Math.atan2(y, x);   // azimuthal angle
+    return { r, theta, phi };
+}
+
+function sphericalToCartesian(r, theta, phi) {
+  const x = r * Math.sin(theta) * Math.cos(phi);
+  const y = r * Math.sin(theta) * Math.sin(phi);
+  const z = r * Math.cos(theta);
+  return { x, y, z };
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
 }
 
 document.addEventListener("blochpointsupdate", function(e) { updatePoints(e.detail) });
 
 let vertices = [
-  0, 8, 0, 
   0, 8, 0, 
 ];
 
@@ -101,6 +144,19 @@ function animate() {
     requestAnimationFrame(animate);
     
     controls.update();
+    
+    for (let i = 0; i < vertices_current.length; i += 1) {
+        vertices_current[i] = lerp(vertices_current[i], vertices_target[i], 0.1)
+    }
+
+    let vertices = [];
+    for (let i = 0; i < vertices_current.length; i += 3) { 
+        let { x, y, z } = sphericalToCartesian(vertices_current[i], vertices_current[i + 1], vertices_current[i + 2]);
+        vertices.push(x, y, z);
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3 ) );
+    geometry.attributes.position.needsUpdate = true; // Flag for updating
 
     renderer.render(scene, camera);
 }

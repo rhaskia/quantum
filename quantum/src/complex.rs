@@ -30,8 +30,14 @@ impl ComplexNumber {
     pub const SQRT_2: Self = ComplexNumber { real: SQRT_2, imaginary: 0.0 };
 
     pub fn pretty(&self) -> String {
-        if self.imaginary > 0.05 {
+        if self.real.abs() < 0.01 {
+            return format!("{}i", pretty_num(self.imaginary));
+        }
+        if self.imaginary > 0.01 {
             return format!("{} + {}i", pretty_num(self.real), pretty_num(self.imaginary));
+        }
+        if self.imaginary < -0.01 {
+            return format!("{} - {}i", pretty_num(self.real), pretty_num(self.imaginary.abs()));
         }
         pretty_num(self.real)
     }

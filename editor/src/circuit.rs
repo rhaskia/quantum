@@ -24,12 +24,12 @@ pub struct CircuitManager {
 impl CircuitManager {
     pub fn new() -> Self {
         Self {
-            system: QubitSystem::new(vec![Qubit::zero(); 2]),
-            gates: vec![vec![Gate::I; 2]],
+            system: QubitSystem::new(vec![Qubit::zero()]),
+            gates: vec![vec![Gate::I]],
             current_drag: Gate::I,
             dragging_wire: (false, 0, 0),
             wires: Vec::new(),
-            registers: 2,
+            registers: 1,
             step: 0,
             functions: Vec::new(),
         }
@@ -60,8 +60,37 @@ impl CircuitManager {
         self.system.add_qubit(Qubit::zero());
     }
 
+    pub fn edit_gate(&mut self, column: usize, register: usize, value: f64) {
+        self.gates[column][register] = match &self.gates[column][register] {
+            Gate::P(_) => Gate::P(value),
+            Gate::RX(_) => Gate::RX(value),
+            Gate::RY(_) => Gate::RY(value),
+            Gate::RZ(_) => Gate::RZ(value),
+            other => other.clone(),
+        }
+    }
+
+    pub fn gate_value(&self, column: usize, register: usize) -> f64 {
+        match self.gates[column][register] {
+            Gate::P(n) => n,
+            Gate::RX(n) => n,
+            Gate::RY(n) => n,
+            Gate::RZ(n) => n,
+            _ => 0.0,
+        }
+    }
+
     pub fn get_values(&self) -> Vec<ComplexNumber> {
         self.system.get_values()
+    }
+
+    pub fn set_example(&mut self, gates: Vec<Vec<Gate>>, wires: Vec<(usize, usize, usize)>) {
+        let len = gates[0].len();
+        self.registers = len;
+        self.system = QubitSystem::new(vec![Qubit::zero(); len]);
+        self.step = 0;
+        self.gates = gates;
+        self.wires = wires;
     }
 
     pub fn handle_drop(&mut self, column: usize, register: usize) {
@@ -74,7 +103,10 @@ impl CircuitManager {
 
         let size = log2(self.current_drag.to_matrix().len());
         if size > self.registers - register {
-            eval(&format!("alert(\"Quantum gate {:?} needs at least {} qubits to work.\")", self.current_drag, size));
+            eval(&format!(
+                "alert(\"Quantum gate {:?} needs at least {} qubits to work.\")",
+                self.current_drag, size
+            ));
             return;
         }
 
@@ -110,6 +142,7 @@ impl CircuitManager {
         self.system = QubitSystem::new(vec![Qubit::zero(); 2]);
         self.registers = 2;
         self.gates = vec![vec![Gate::I; 2]];
+        self.wires = Vec::new();
         Self::send_bloch_vectors(vec![vec![0.0, 0.0, 1.0]])
     }
 
@@ -128,7 +161,7 @@ impl CircuitManager {
                 .flatten()
                 .collect::<Vec<f64>>(),
         );
-    } 
+    }
 
     pub fn step(&mut self) {
         if self.step == self.gates.len() {
@@ -172,7 +205,7 @@ impl CircuitManager {
 
             for i in 0..self.registers {
                 tracing::info!("{removed}, {qubit_idx}");
-                if i != qubit_idx { 
+                if i != qubit_idx {
                     density = partial_trace(density.clone(), i - removed, size);
                     size -= 1;
                     removed += 1;
@@ -302,16 +335,15 @@ pub fn GateObject(column: usize, register: usize) -> Element {
                 }
             },
             "{CIRCUIT.read().gates[column][register]:?}"
-            if CIRCUIT.read().gates[column][register].is_phase() {
+            if CIRCUIT.read().gates[column][register].is_variable() {
                 "("
                 span {
                     contenteditable: true,
                     oninput: move |e| {
-                        CIRCUIT.write().gates[column][register] =
-                            Gate::P(e.data().value().parse().unwrap_or(0.0));
+                        CIRCUIT.write().edit_gate(column, register, e.data().value().parse().unwrap_or(0.0));
                     },
                     role: "textbox",
-                    "0"
+                    {CIRCUIT.read().gate_value(column, register).to_string()}
                 }
                 ")"
             }
@@ -340,6 +372,21 @@ pub fn WireCreator(column: usize, register: usize) -> Element {
     }
 }
 
+#[macro_export]
+macro_rules! gates {
+    // Match the pattern for a 2D matrix
+    [$([$($elem:expr),* $(,)?]),* $(,)?] => {
+        {
+            use Gate::*;
+            vec![
+                $(
+                    vec![$($elem),*]
+                ),*
+            ]
+        }
+    };
+}
+
 #[component]
 pub fn CircuitParts() -> Element {
     let gates = use_signal(|| {
@@ -363,6 +410,35 @@ pub fn CircuitParts() -> Element {
         ]
     });
 
+    let examples = use_signal(|| {
+        vec![
+            ("Entanglement", gates![[H, I], [CNOT, Other(String::from("none"))], [I, I]], vec![]),
+            (
+                "Partial Entanglement",
+                gates![
+                    [H, I],
+                    [I, RY(0.39269)],
+                    [CNOT, Other(String::from("none"))],
+                    [I, RY(0.39269)],
+                    [I, I]
+                ],
+                vec![],
+            ),
+            (
+                "Quantum Teleportation",
+                gates![
+                    [X, H, I], 
+                    [I, CNOT, Other(String::from("none"))], 
+                    [CNOT, Other(String::from("none")), I],
+                    [H, I, I],
+                    [I, M, X],
+                    [M, I, Z]
+                ],
+                vec![(4, 1, 2), (5, 0, 2)],
+            ),
+        ]
+    });
+
     rsx! {
         div {
             class: "circuitparts",
@@ -378,11 +454,24 @@ pub fn CircuitParts() -> Element {
 
             div { flex_grow: 1 }
 
-            button {
-                class: "addgatebutton",
-                onclick: move |_| CIRCUIT.write().add_column(),
-                "+"
+            select {
+                class: "exampleselector",
+                option {
+                    "Choose an example"
+                }
+                for i in 0..examples.read().len() {
+                    option {
+                        onclick: move |_| CIRCUIT.write().set_example(examples.read()[i].1.clone(), examples.read()[i].2.clone()),
+                        "{examples.read()[i].0}"
+                    }
+                }
             }
+
+            // button {
+            //     class: "addgatebutton",
+            //     onclick: move |_| CIRCUIT.write().add_column(),
+            //     "+"
+            // }
 
             button {
                 class: "clearbutton",
